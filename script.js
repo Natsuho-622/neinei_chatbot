@@ -199,7 +199,7 @@ const intentReplies = [
         tone,
         core: `${character.name}だよ〜。しんどい日も、なんでもない日も、ここでゆるっと話を聞く存在だよ。`,
         detail: `わしは正論より先に、${callName(character)}の気持ちを受け取りたいんだ。`,
-        question: "今日は、聞いてほしい話がある？それともただ雑談したい？"
+        question: "今日は何の話から、ゆるっと始めよっか？"
       })
   },
   {
@@ -494,22 +494,19 @@ function understandMessage(text) {
     };
   }
 
+  const context = readMessageContext(normalized);
   return {
     core: pick([
-      "うんうん、ちゃんと聞いてるよ〜。",
-      "そっか、そういう感じなんだね〜。",
-      "なるほどだね。話してくれてありがとう。"
+      `${context.topic}、ちゃんと受け取ったよ〜。`,
+      `${context.topic}が、今の心の中で少し場所を取ってる感じがするね。`,
+      `うんうん、${context.topic}のことを話してくれたんだね。`
     ]),
     detail: styleDetail({
-      listener: `${name}の中で、まだ言葉にしきれてないところがありそうだね。`,
-      chatty: "何気ない話に見えても、今の気分がちょっと混ざってる感じがするよ。",
-      coach: "今日は解決しなくても満点。まずは形を見つけるだけでいいよ。"
+      listener: `${name}の言葉からは、${context.reading}感じがするよ。急いで整えなくて大丈夫。`,
+      chatty: `何気ない話みたいでも、${context.topic}には今の気分が少し混ざってるのかも。`,
+      coach: `今日は答えを出さなくても満点。まずは${context.focus}をそっと置けたら十分だよ。`
     }),
-    question: pick([
-      "それを話してみて、今の気持ちは少し変わった？",
-      "その話の中で、いちばん残ってる感じはどこ？",
-      "わしには、もう少し聞いてほしい？それとも一緒に名前をつけてみる？"
-    ])
+    question: pick(context.questions)
   };
 }
 
@@ -524,6 +521,111 @@ function styleDetail(options) {
 
 function hasAny(text, words) {
   return words.some((word) => text.includes(word));
+}
+
+function readMessageContext(text) {
+  const topicProfiles = [
+    {
+      words: ["仕事", "職場", "上司", "会社", "バイト", "残業", "会議", "ミス"],
+      topic: "仕事のこと",
+      focus: "今日いちばん疲れた場面",
+      questions: [
+        "仕事の中で、いちばん気持ちが削れたのはどの場面だった？",
+        "その仕事の話、今は悔しさ寄り？疲れ寄り？不安寄り？",
+        "今日は仕事から少し離れたい感じ？それとも一回だけ整理したい感じ？"
+      ]
+    },
+    {
+      words: ["友達", "友人", "彼氏", "彼女", "恋人", "家族", "親", "母", "父", "人間関係", "LINE", "返信"],
+      topic: "人とのこと",
+      focus: "その人との距離感",
+      questions: [
+        "その人とのことで、いちばん心に残ってるのは言葉？態度？空気感？",
+        "今は相手の気持ちが気になる？それとも自分の傷つきが大きい？",
+        "その関係、近づきたい感じ？少し距離を置きたい感じ？"
+      ]
+    },
+    {
+      words: ["体調", "頭痛", "お腹", "肩", "だるい", "眠い", "寝れ", "眠れ", "病院"],
+      topic: "体のこと",
+      focus: "体が出してる小さいサイン",
+      questions: [
+        "体のしんどさ、今いちばん強いのは重さ？痛さ？眠さ？",
+        "その体の感じ、休めば戻りそう？それとも少し心配な感じ？",
+        "今日は体を甘やかすなら、温める・寝る・食べるのどれがよさそう？"
+      ]
+    },
+    {
+      words: ["作りたい", "創作", "絵", "文章", "動画", "企画", "アイデア", "作品", "投稿"],
+      topic: "作りたいもののこと",
+      focus: "わくわくと引っかかりの両方",
+      questions: [
+        "作りたい気持ちの中で、今いちばん光ってる部分はどこ？",
+        "そこにあるのは、楽しみのほうが大きい？それとも不安のほうが大きい？",
+        "最初の一歩にするなら、考える・書く・試すのどれが軽そう？"
+      ]
+    },
+    {
+      words: ["予定", "明日", "今日", "タスク", "締切", "準備", "予約", "行く"],
+      topic: "予定のこと",
+      focus: "頭の中で場所を取ってる予定",
+      questions: [
+        "その予定、楽しみより緊張が勝ってる感じ？",
+        "今日の中で、先に軽くしたい予定はどれっぽい？",
+        "予定の重さは、量が多い感じ？気持ちが乗らない感じ？"
+      ]
+    },
+    {
+      words: ["自分", "私", "わたし", "僕", "ぼく", "俺", "おれ", "性格", "人生", "将来", "不安"],
+      topic: "自分のこと",
+      focus: "自分に向けてる目線",
+      questions: [
+        "自分のことを考えた時、今いちばん強いのは不安？疲れ？焦り？",
+        "その気持ち、自分を責める声に近い？それとも守りたい声に近い？",
+        "今の自分に一言かけるなら、どんな言葉なら少し呼吸できそう？"
+      ]
+    }
+  ];
+
+  const matched = topicProfiles.find((profile) => hasAny(text, profile.words));
+  const topic = matched?.topic || "その話";
+  const focus = matched?.focus || "心に残っているところ";
+  const baseQuestions = matched?.questions || [
+    "その話の中で、今いちばん温度が残ってるのはどこ？",
+    "話してみて、気持ちは少し軽い？それともまだ胸のあたりにある？",
+    "そこにある気持ち、近いのは安心・不安・疲れ・楽しさのどれ？"
+  ];
+
+  return {
+    topic,
+    focus,
+    reading: readFeelingTexture(text),
+    questions: baseQuestions
+  };
+}
+
+function readFeelingTexture(text) {
+  if (hasAny(text, ["疲", "だる", "眠", "しんど", "無理"])) {
+    return "がんばりすぎて少し力が抜けてる";
+  }
+
+  if (hasAny(text, ["不安", "怖", "こわ", "心配", "緊張"])) {
+    return "先のことが気になって落ち着きにくい";
+  }
+
+  if (hasAny(text, ["嬉", "うれ", "楽", "好き", "楽し", "わくわく"])) {
+    return "ちょっと大事にしたい明るさがある";
+  }
+
+  if (hasAny(text, ["迷", "悩", "わから", "どうしよう", "困"])) {
+    return "決めきれないものを抱えている";
+  }
+
+  if (hasAny(text, ["嫌", "むか", "怒", "もや", "モヤ", "悲", "泣"])) {
+    return "飲み込みきれない気持ちが残っている";
+  }
+
+  return "まだ少し形を探している";
 }
 
 function recipientName(targetCharacter) {
@@ -622,9 +724,9 @@ function makeFollowUpQuestion(targetCharacter, tone) {
 function extraListeningPrompts(targetCharacter) {
   const name = callName(targetCharacter);
   return [
-    `${name}が満足するまで聞くよ〜。今は安心がほしい？それとも言葉にしたい？`,
-    "まだ言葉になってないところ、音にするとため息っぽい？泣きたい感じ？",
-    `${name}のペースで大丈夫だよ。今は近くで聞いてるだけがいい？`,
+    `${name}が満足するまでここにいるよ〜。今は安心がほしい？それとも少し整理したい？`,
+    "その気持ち、音にするとため息っぽい？泣きたい感じ？",
+    `${name}のペースで大丈夫だよ。今は相づち多め？それとも一緒にほどく感じ？`,
     "その気持ち、手のひらに乗せたら重そう？軽そう？",
     "わしが隣にいるとして、今かけてほしい言葉はどんな温度がいい？"
   ];
