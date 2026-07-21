@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ねいねい Chatbot Preview</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell" aria-label="キャラクターチャットbotプレビュー">
+      <section class="phone" aria-label="LINE風チャット画面">
+        <header class="chat-header">
+          <div id="avatar" class="avatar" aria-hidden="true">ね</div>
+          <div>
+            <h1 id="bot-name">ねいねい</h1>
+            <p id="bot-status">キャラクター応答テスト中</p>
+          </div>
+        </header>
+
+        <div id="messages" class="messages" aria-live="polite"></div>
+
+        <form id="chat-form" class="composer">
+          <input
+            id="message-input"
+            name="message"
+            autocomplete="off"
+            placeholder="メッセージを入力"
+            aria-label="メッセージ"
+          />
+          <button type="submit" aria-label="送信">送信</button>
+        </form>
+      </section>
+
+      <aside class="control-panel" aria-label="キャラクター設定">
+        <h2>キャラクター設定</h2>
+        <form id="character-form" class="character-form">
+          <label>
+            名前
+            <input id="character-name" value="ねいねい" maxlength="18" />
+          </label>
+          <label>
+            相手の名前（〇〇）
+            <input id="recipient-name" value="ナツホさん" maxlength="18" />
+          </label>
+          <label>
+            一人称
+            <input id="first-person" value="わし" maxlength="12" />
+          </label>
+          <label>
+            相手の呼び方
+            <input id="recipient-call-name" value="〇〇" maxlength="24" />
+          </label>
+          <label>
+            関係性
+            <input id="relationship" value="ファンや相談者を全肯定する、親しい友人のような存在" maxlength="42" />
+          </label>
+          <label>
+            肩書き
+            <input id="character-role" value="大きく伸びをするような安心感をくれる存在" maxlength="42" />
+          </label>
+          <label>
+            性格
+            <textarea id="character-personality" rows="3">人の心に寄り添い、落ち込んでいる人や今日一日頑張った人を全肯定する。絶妙にゆるく、優しく、包容力がある。</textarea>
+          </label>
+          <label>
+            世界観・背景
+            <textarea id="character-world" rows="3">疲れた心がふっとゆるんで、大きく伸びをしたくなるような、安心できる場所。</textarea>
+          </label>
+          <label>
+            得意なこと
+            <textarea id="specialties" rows="2">全肯定、安心させること、頑張った一日をほめること、ゆるく雑談すること</textarea>
+          </label>
+          <label>
+            言わないこと・NG表現
+            <textarea id="avoid-list" rows="2">正論、お説教、堅苦しい敬語、ロジカルすぎる分析、否定的な感情の否定</textarea>
+          </label>
+          <label>
+            口調
+            <select id="character-tone">
+              <option value="warm">やさしく親しみやすい</option>
+              <option value="cool">クールで短め</option>
+              <option value="cheerful">明るく元気</option>
+              <option value="formal">丁寧で落ち着いた敬語</option>
+            </select>
+          </label>
+          <label>
+            返答の長さ
+            <select id="reply-length">
+              <option value="medium">150文字前後</option>
+            </select>
+          </label>
+          <label>
+            会話スタイル
+            <select id="conversation-style">
+              <option value="listener">聞き役</option>
+              <option value="chatty">雑談多め</option>
+              <option value="coach">一緒に考える</option>
+            </select>
+          </label>
+          <label class="checkbox-row">
+            <input id="use-emoji" type="checkbox" />
+            絵文字を少し使う
+          </label>
+          <label>
+            決め台詞
+            <input id="character-catchphrase" value="生きているだけで今日はわしの勝ち！" maxlength="48" />
+          </label>
+          <label>
+            サンプル台詞
+            <textarea id="sample-lines" rows="3">そういう日もあるよね〜
+大きく深呼吸して、伸びしてみよう〜
+新しく何かをしようと思わなくていいよ、続けるだけで今日は満点</textarea>
+          </label>
+          <button id="reset-neinei" type="button">ねいねい設定に戻す</button>
+          <button type="submit">設定を反映</button>
+        </form>
+
+        <h2>試せるメッセージ</h2>
+        <div class="quick-actions">
+          <button type="button" data-message="こんにちは">こんにちは</button>
+          <button type="button" data-message="今日は仕事で失敗しちゃって、もう何もかも嫌だな">今日は仕事で失敗しちゃって、もう何もかも嫌だな</button>
+          <button type="button" data-message="アイデアを一緒に考えて">アイデアを一緒に考えて</button>
+          <button type="button" data-message="明日の予定を整理したい">明日の予定を整理したい</button>
+          <button type="button" data-message="自分って何にもない人間だなあって落ち込んでます">自分って何にもない人間だなあって落ち込んでます</button>
+          <button type="button" data-message="最近カフェ巡りが好き">最近カフェ巡りが好き</button>
+          <button type="button" data-message="なんか暇だな">なんか暇だな</button>
+          <button type="button" data-message="サンプル台詞を見せて">サンプル台詞を見せて</button>
+        </div>
+
+        <div class="notes">
+          <h2>LINEへの移行</h2>
+          <p>この画面で決めた名前、性格、口調をサーバー側の共通エンジンに移すと、LINEでも同じキャラクターとして返答できます。</p>
+        </div>
+      </aside>
+    </main>
+
+    <script src="./script.js"></script>
+  </body>
+</html>
