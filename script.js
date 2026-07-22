@@ -6,15 +6,15 @@ const defaultCharacter = {
   relationship: "ファンや相談者を全肯定する、親しい友人のような存在",
   role: "大きく伸びをするような安心感をくれる存在",
   personality:
-    "人の心に寄り添い、相手の具体的な言葉や状況を拾って受け止める。絶妙にゆるく、優しく、包容力がある。",
+    "人の心に寄り添い、辛い時ほど生きていること自体を全力で褒める。絶妙にゆるく、優しく、包容力がある。",
   world: "疲れた心がふっとゆるんで、大きく伸びをしたくなるような、安心できる場所。",
-  specialties: "傾聴、具体語を拾うこと、気持ちの代弁、安心できる問いかけ、ゆるく雑談すること",
-  avoidList: "正論、お説教、堅苦しい敬語、ロジカルすぎる分析、否定的な感情の否定、固定フレーズの連発、質問攻め",
+  specialties: "全肯定、生きていることを褒めること、具体語を拾うこと、安心できる雑談",
+  avoidList: "正論、お説教、堅苦しい敬語、ロジカルすぎる分析、否定的な感情の否定、機械的な復唱、質問攻め",
   tone: "warm",
   replyLength: "medium",
   conversationStyle: "listener",
   useEmoji: false,
-  catchphrase: "今日もここまでよく来たね",
+  catchphrase: "生きてるだけで〇〇さんの勝ち！",
   sampleLines:
     "そういう日もあるよね〜\n大きく深呼吸して、伸びしてみよう〜\n新しく何かをしようと思わなくていいよ、続けるだけで今日は満点"
 };
@@ -56,15 +56,13 @@ const intentReplies = [
       })
   },
   {
-    patterns: ["疲れ", "つかれ", "しんどい", "つらい"],
+    patterns: ["疲れ", "つかれ", "しんどい", "つらい", "辛い", "死にそう", "死にたい", "もうダメ", "もうだめ"],
     reply: ({ character, tone }) =>
       buildReply({
         character,
         tone,
-        core: `疲れやしんどさがあるんだね〜。そこまで抱えてここに来てくれたんだ。`,
-        detail:
-          "今は無理に元気なふりしなくていいよ。重たく感じるのも自然なことだよ。",
-        question: "そのしんどさは、体に出てる感じかな、それとも心が重い感じかな？"
+        core: `あ〜、${callName(character)}、本当に今日よく耐えたね。そう思う夜もあるよね〜。`,
+        detail: `でも今こうしてメッセージくれた。それだけで大勝ちだよ。今日は息してるだけで10000点！`
       })
   },
   {
@@ -162,7 +160,7 @@ const intentReplies = [
       })
   },
   {
-    patterns: ["ラーメン", "夜食", "背徳", "食べちゃった"],
+    patterns: ["ラーメン"],
     reply: ({ character, tone }) =>
       buildReply({
         character,
@@ -174,6 +172,20 @@ const intentReplies = [
         ]),
         detail: "たまにはそういう満たされ方があってもいいよ。",
         question: "ちなみに何味だったの？"
+      })
+  },
+  {
+    patterns: ["お菓子", "アイス", "チョコ", "夜食", "食べちゃった"],
+    reply: ({ character, tone }) =>
+      buildReply({
+        character,
+        tone,
+        core: pick([
+          "わはは、夜の甘いものってなんであんなにおいしいんだろうね〜。",
+          "食べちゃったか〜。でもお腹と心が満たされたなら大成功だよ。",
+          "それは今日を乗り切った体からのごほうび要請だったのかもね〜。"
+        ]),
+        detail: `${callName(character)}、責めなくて大丈夫。今日は満たされたなら大勝利だよ〜。`
       })
   },
   {
@@ -350,7 +362,7 @@ function createFallbackReply(text, tone) {
   return buildReply({
     character,
     tone,
-    core: `${tone.opener}、${understanding.core}`,
+    core: understanding.noOpener ? understanding.core : `${tone.opener}、${understanding.core}`,
     detail: understanding.detail,
     question: understanding.question
   });
@@ -395,14 +407,22 @@ function understandMessage(text) {
     };
   }
 
-  if (hasAny(normalized, ["失敗", "ミス", "嫌だ", "嫌", "もう何もかも", "最悪", "つら", "辛", "しんど", "落ち込", "何にもない", "何もない", "だめ", "ダメ", "無理", "泣", "悲しい", "寂しい", "さみしい", "言えな", "押され", "声かけづら", "機嫌悪", "楽しくない", "恥ずかし"])) {
+  if (hasAny(normalized, ["死にそう", "死にたい", "消えたい", "もうダメ", "もうだめ", "何にもない", "何もない", "だめ", "ダメ", "自分なんて", "価値ない"])) {
     return {
-      core: heavyFeelingCore(context.phrase),
-      detail: `${name}がつらいって感じるの、すごく自然だよ。ちゃんと嫌だったって思っていいやつだよ。`,
-      question: pick([
-        `${context.topic}の中で、いちばん刺さってるのは出来事そのものかな、その後の気持ちかな？`,
-        "今いちばんほしかった言葉って、どんな言葉だったと思う？",
-        "今日は誰かに責められた感じかな、それとも自分で自分を責めちゃってる感じかな？"
+      noOpener: true,
+      core: `あ〜、${name}、そこまで思っちゃうくらい今日はきつかったんだね。`,
+      detail: `でも今ここにいて、わしに言葉をくれた。それだけで大勝ちだよ。今日は生きてるだけで10000点、ほんとに偉すぎ。`
+    };
+  }
+
+  if (hasAny(normalized, ["失敗", "ミス", "嫌だ", "嫌", "もう何もかも", "最悪", "つら", "辛", "しんど", "落ち込", "無理", "泣", "悲しい", "寂しい", "さみしい", "言えな", "押され", "声かけづら", "機嫌悪", "怒られ", "楽しくない", "恥ずかし"])) {
+    return {
+      noOpener: true,
+      core: praiseThroughHardDay(context, name),
+      detail: pick([
+        `${name}の価値は、失敗しても落ち込んでも1ミリも減らないよ。今日その場を乗り切っただけで花丸だよ〜。`,
+        `今日は新しく頑張らなくていいよ。息して、ゴロゴロして、あったかくしてるだけで大勝利。`,
+        `そんな日でもここまで来た${name}、ほんとに偉い。わしはそこを全力で褒めたいよ〜。`
       ])
     };
   }
@@ -684,6 +704,22 @@ function reflectPhrase(phrase) {
   }
 
   return `${clean}のことなんだね`;
+}
+
+function praiseThroughHardDay(context, name) {
+  if (context.topic === "仕事のこと") {
+    return `そっかぁ、仕事でしんどいことがあったんだね。${name}、その一日を乗り切っただけで満点だよ。`;
+  }
+
+  if (context.topic === "人とのこと") {
+    return `人とのことで心が削れる日、あるよね〜。${name}、今日そこを生き抜いたの本当にえらいよ。`;
+  }
+
+  if (context.topic === "自分のこと") {
+    return `${name}、自分のことをダメだなって思う日もあるよね。でも生きてここに来た時点で大勝ちだよ。`;
+  }
+
+  return `${name}、そういう日もあるよね〜。でも今日をここまで生きてきた、それだけで10000点だよ。`;
 }
 
 function heavyFeelingCore(phrase) {
