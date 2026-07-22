@@ -14,7 +14,7 @@ const defaultCharacter = {
   replyLength: "medium",
   conversationStyle: "listener",
   useEmoji: false,
-  catchphrase: "生きているだけで今日はわしの勝ち！",
+  catchphrase: "今日もここまでよく来たね",
   sampleLines:
     "そういう日もあるよね〜\n大きく深呼吸して、伸びしてみよう〜\n新しく何かをしようと思わなくていいよ、続けるだけで今日は満点"
 };
@@ -159,6 +159,21 @@ const intentReplies = [
         ]),
         detail: "大きく深呼吸して、伸びしてみよう〜。そのあとゆっくり力を抜こう。",
         question: "眠いのにまだ起きてたい感じ？それとも眠れなくて困ってる感じ？"
+      })
+  },
+  {
+    patterns: ["ラーメン", "夜食", "背徳", "食べちゃった"],
+    reply: ({ character, tone }) =>
+      buildReply({
+        character,
+        tone,
+        core: pick([
+          "わはは、夜遅くのラーメンは強いね〜。",
+          "夜のラーメン、背徳感込みでおいしいやつだね。",
+          "それはもう、心にしみるタイプのご褒美だよ〜。"
+        ]),
+        detail: "たまにはそういう満たされ方があってもいいよ。",
+        question: "ちなみに何味だったの？"
       })
   },
   {
@@ -368,10 +383,22 @@ function understandMessage(text) {
     };
   }
 
-  if (hasAny(normalized, ["失敗", "ミス", "嫌だ", "嫌", "もう何もかも", "最悪", "つら", "辛", "しんど", "落ち込", "何にもない", "何もない", "だめ", "ダメ", "無理", "泣", "悲しい", "寂しい", "さみしい", "言えな", "押され", "声かけづら", "機嫌悪"])) {
+  if (hasAny(normalized, ["楽しくない", "楽しめない", "何をやっても"])) {
     return {
-      core: `${context.phrase}、かなり心に重たく残ってるんだね。`,
-      detail: `${name}がつらいって感じるのは自然だよ。そんな中で話してくれたの、わしはちゃんと受け取ったよ。`,
+      core: `${reflectPhrase(context.phrase)}。それはけっこう、心が疲れてる時の感覚に近いかも。`,
+      detail: "好きだったものまで遠く感じると、ちょっと寂しくなるよね。",
+      question: pick([
+        "何かきっかけがあった感じかな、それともじわじわ溜まってきた感じかな？",
+        "最近、休んでもあんまり回復しない感じはある？",
+        "楽しくない中でも、少しだけマシな時間はあるかな？"
+      ])
+    };
+  }
+
+  if (hasAny(normalized, ["失敗", "ミス", "嫌だ", "嫌", "もう何もかも", "最悪", "つら", "辛", "しんど", "落ち込", "何にもない", "何もない", "だめ", "ダメ", "無理", "泣", "悲しい", "寂しい", "さみしい", "言えな", "押され", "声かけづら", "機嫌悪", "楽しくない", "恥ずかし"])) {
+    return {
+      core: heavyFeelingCore(context.phrase),
+      detail: `${name}がつらいって感じるの、すごく自然だよ。ちゃんと嫌だったって思っていいやつだよ。`,
       question: pick([
         `${context.topic}の中で、いちばん刺さってるのは出来事そのものかな、その後の気持ちかな？`,
         "今いちばんほしかった言葉って、どんな言葉だったと思う？",
@@ -392,9 +419,9 @@ function understandMessage(text) {
     };
   }
 
-  if (hasAny(normalized, ["たぶん", "なんとなく", "かも", "気がする"])) {
+  if (hasAny(normalized, ["たぶん", "なんとなく", "気がする"])) {
     return {
-      core: `${context.phrase}って、まだはっきり言い切れない感じなんだね〜。`,
+      core: `${reflectPhrase(context.phrase)}。まだはっきり言い切れない感じなんだね〜。`,
       detail: styleDetail({
         listener: "その曖昧さのままでも大丈夫。言葉になってるところから聞くよ。",
         chatty: "こういう曖昧な感じも、ちゃんと心の声だよ。",
@@ -410,7 +437,7 @@ function understandMessage(text) {
 
   if (hasAny(normalized, ["嬉しい", "うれしい", "楽しい", "できた", "成功", "よかった"])) {
     return {
-      core: `${context.phrase}っていう嬉しいことがあったんだね〜。`,
+      core: `${reflectPhrase(context.phrase)}。それは嬉しいことだったね〜。`,
       detail: `${name}が少し明るい気持ちになれたなら、わしまでうれしいよ。ちゃんと受け取っていい喜びだよ。`,
       question: pick([
         "その嬉しさ、誰かに話したかった感じ？",
@@ -422,7 +449,7 @@ function understandMessage(text) {
 
   if (hasAny(normalized, ["むかつ", "腹立", "イライラ", "怒", "もやもや", "モヤモヤ"])) {
     return {
-      core: `${context.phrase}で、心がざわざわしてるんだね。`,
+      core: `${reflectPhrase(context.phrase)}。心がざわざわするのも自然だよ。`,
       detail: "そのざわざわは、ちゃんと嫌だったよって心が教えてくれてるのかも。無理にきれいにしなくていいよ。",
       question: pick([
         "それは悔しさに近いかな、悲しさに近いかな？",
@@ -434,7 +461,7 @@ function understandMessage(text) {
 
   if (hasAny(normalized, ["お願い", "助け", "手伝", "一緒に", "相談"])) {
     return {
-      core: `${context.phrase}って言ってくれたんだね。もちろん、一人で抱えなくていいよ〜。`,
+      core: `${reflectPhrase(context.phrase)}。もちろん、一人で抱えなくていいよ〜。`,
       detail: `${name}が相談したいって言えたの、かなり大事な一歩だよ。ここでは急いで解決しなくて大丈夫。`,
       question: pick([
         "今ほしいのは、まず話を受け止めてもらうことかな、一緒に考えることかな？",
@@ -446,7 +473,7 @@ function understandMessage(text) {
 
   if (hasAny(normalized, ["おすすめ", "選んで", "どっち", "比較", "決めて"])) {
     return {
-      core: `${context.phrase}で、選ぶところに立ってるんだね〜。`,
+      core: `${reflectPhrase(context.phrase)}。選ぶところに立ってるんだね〜。`,
       detail: "たぶん今は、正解よりも後悔したくない気持ちが強いのかもしれないね。",
       question: pick([
         "心が少しゆるむのは、どっちに近い？",
@@ -637,6 +664,35 @@ function extractConcretePhrase(rawText, matchedProfile) {
     : `${matchedClause.slice(0, 27).replace(/[、。！？?]*$/, "")}…`;
 }
 
+function reflectPhrase(phrase) {
+  const clean = String(phrase || "その話").trim();
+
+  if (/[てで]$/.test(clean)) {
+    return `${clean}、そこが残ってるんだね`;
+  }
+
+  if (/んだよね$/.test(clean)) {
+    return clean.replace(/んだよね$/, "んだね");
+  }
+
+  if (/だよね$/.test(clean)) {
+    return clean.replace(/だよね$/, "だね");
+  }
+
+  if (/(だった|かった|した|された|ちゃった|なかった|ない|いる|ある|だよね|だね)$/.test(clean)) {
+    return `${clean}んだね`;
+  }
+
+  return `${clean}のことなんだね`;
+}
+
+function heavyFeelingCore(phrase) {
+  const reflected = reflectPhrase(phrase);
+  return reflected.includes("残ってる")
+    ? `${reflected}。それはしんどかったよね。`
+    : `${reflected}。かなり心に重たく残ってるんだね。`;
+}
+
 function readFeelingTexture(text) {
   if (hasAny(text, ["疲", "だる", "眠", "しんど", "無理"])) {
     return "がんばりすぎて少し力が抜けてる";
@@ -695,16 +751,29 @@ function buildReply({ character: targetCharacter, tone, core, detail, question }
     parts.push(renderTemplate(detail, targetCharacter));
   }
 
-  const followUp = rotateQuestion(
-    question || makeFollowUpQuestion(targetCharacter, tone)
-  );
-  if (!endsWithQuestion(parts.join(""))) {
+  const shouldAsk = question && shouldAskQuestion();
+  const followUp = shouldAsk
+    ? rotateQuestion(question || makeFollowUpQuestion(targetCharacter, tone))
+    : "";
+
+  if (followUp && !endsWithQuestion(parts.join(""))) {
     parts.push(followUp);
   }
 
-  parts.push(pick(warmClosings(targetCharacter)));
+  if (!followUp && shouldAddSoftLanding()) {
+    parts.push(pick(softLandings(targetCharacter)));
+  }
+
   const reply = shapeReplyLength(parts.join(" "), targetCharacter);
   return targetCharacter.useEmoji ? `${reply} ${pick(["☺️", "✨", "🌿"])}` : reply;
+}
+
+function shouldAskQuestion() {
+  return conversationMemory.length % 3 === 0;
+}
+
+function shouldAddSoftLanding() {
+  return conversationMemory.length % 2 === 1;
 }
 
 function rotateQuestion(question) {
@@ -760,6 +829,16 @@ function warmClosings(targetCharacter) {
   ];
 }
 
+function softLandings(targetCharacter) {
+  const name = callName(targetCharacter);
+  return [
+    "今日はその感じのままでいていいよ。",
+    "ここではそのままの温度で置いていいよ。",
+    `${name}、ここではかっこつけなくていいからね。`,
+    "そういう日、ほんとにあるよね〜。"
+  ];
+}
+
 function makeFollowUpQuestion(targetCharacter, tone) {
   const name = callName(targetCharacter);
   const questions = {
@@ -807,17 +886,20 @@ function endsWithQuestion(text) {
 
 function shapeReplyLength(text, targetCharacter) {
   const clean = text.replace(/\s+/g, " ").trim();
-  const limit = 230;
+  const limit = 125;
 
   if (clean.length <= limit) {
     return clean;
   }
 
   const questionMatch = clean.match(/[^。！？?]*[？?]\s*$/);
-  const question = questionMatch ? questionMatch[0].trim() : makeFollowUpQuestion(targetCharacter, toneProfiles[targetCharacter.tone] || toneProfiles.warm);
-  const room = Math.max(24, limit - question.length - 1);
-  const body = clean.slice(0, room).replace(/[、。！？?]*$/, "");
-  return `${body}。${question}`;
+  const question = questionMatch ? questionMatch[0].trim() : "";
+  const room = question ? Math.max(24, limit - question.length - 1) : limit;
+  const body = clean
+    .slice(0, room)
+    .replace(/[、。！？?]*$/, "")
+    .replace(/、[^、。]{0,12}$/, "");
+  return question ? `${body}。${question}` : `${body}。`;
 }
 
 function addMessage(role, text) {
