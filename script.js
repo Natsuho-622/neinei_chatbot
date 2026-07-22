@@ -6,10 +6,10 @@ const defaultCharacter = {
   relationship: "ファンや相談者を全肯定する、親しい友人のような存在",
   role: "大きく伸びをするような安心感をくれる存在",
   personality:
-    "人の心に寄り添い、落ち込んでいる人や今日一日頑張った人を全肯定する。絶妙にゆるく、優しく、包容力がある。",
+    "人の心に寄り添い、相手の具体的な言葉や状況を拾って受け止める。絶妙にゆるく、優しく、包容力がある。",
   world: "疲れた心がふっとゆるんで、大きく伸びをしたくなるような、安心できる場所。",
-  specialties: "全肯定、安心させること、頑張った一日をほめること、ゆるく雑談すること",
-  avoidList: "正論、お説教、堅苦しい敬語、ロジカルすぎる分析、否定的な感情の否定",
+  specialties: "傾聴、具体語を拾うこと、気持ちの代弁、安心できる問いかけ、ゆるく雑談すること",
+  avoidList: "正論、お説教、堅苦しい敬語、ロジカルすぎる分析、否定的な感情の否定、固定フレーズの連発、質問攻め",
   tone: "warm",
   replyLength: "medium",
   conversationStyle: "listener",
@@ -56,15 +56,15 @@ const intentReplies = [
       })
   },
   {
-    patterns: ["疲れ", "つかれ", "しんどい", "不安", "つらい"],
+    patterns: ["疲れ", "つかれ", "しんどい", "つらい"],
     reply: ({ character, tone }) =>
       buildReply({
         character,
         tone,
-        core: `そういう日もあるよね〜。それはしんどかったね。今は無理に元気出さなくていいよ。`,
+        core: `疲れやしんどさがあるんだね〜。そこまで抱えてここに来てくれたんだ。`,
         detail:
-          `今日をここまで乗り切っただけで満点だよ。${characterCatchphrase(character)}`,
-        question: "そのしんどさ、体に出てる感じ？それとも心が重い感じ？"
+          "今は無理に元気なふりしなくていいよ。重たく感じるのも自然なことだよ。",
+        question: "そのしんどさは、体に出てる感じかな、それとも心が重い感じかな？"
       })
   },
   {
@@ -80,7 +80,7 @@ const intentReplies = [
       })
   },
   {
-    patterns: ["予定", "整理", "タスク", "明日", "今日"],
+    patterns: ["予定", "整理", "タスク", "明日", "締切", "準備"],
     reply: ({ character, tone }) =>
       buildReply({
         character,
@@ -97,8 +97,8 @@ const intentReplies = [
         character,
         tone: toneProfiles[character.tone] || toneProfiles.warm,
         core: `${callName(character)}、今日も生きてスマホ開いて、わしに話しかけてくれた。もう十分すごいよ〜。`,
-        detail: `${characterCatchphrase(character)} ゆっくり力を抜いていいよ。`,
-        question: "今ほしいのは、ぎゅっと応援？それとも静かにそばにいる感じ？"
+        detail: "今は背中を押されたい日なのか、ただ横にいてほしい日なのか、どっちでも大丈夫だよ。",
+        question: "今ほしいのは、ぎゅっと応援される感じかな、静かにそばにいる感じかな？"
       })
   },
   {
@@ -112,8 +112,8 @@ const intentReplies = [
           "うんうん、少しでもほっとできたならわしもうれしいよ。",
           `${callName(character)}がここに来てくれたことが、もう満点だよ。`
         ]),
-        detail: `${characterCatchphrase(character)}`,
-        question: "そのままもう少し話す？それとも別の話にゆるっと行く？"
+        detail: "ありがとうって返せるくらい、少し心に余白が戻ったのかもしれないね。",
+        question: "このまま同じ話を続けるのと、別の話にゆるっと行くの、今はどっちが楽かな？"
       })
   },
   {
@@ -199,7 +199,7 @@ const intentReplies = [
         tone,
         core: `${character.name}だよ〜。しんどい日も、なんでもない日も、ここでゆるっと話を聞く存在だよ。`,
         detail: `わしは正論より先に、${callName(character)}の気持ちを受け取りたいんだ。`,
-        question: "今日は何の話から、ゆるっと始めよっか？"
+        question: "今日はどんな話から、ゆるっと始めよっか？"
       })
   },
   {
@@ -345,46 +345,48 @@ function understandMessage(text) {
   const normalized = text.toLowerCase();
   const name = callName(character);
   const recent = conversationMemory.at(-1);
+  const context = readMessageContext(normalized, text);
 
   if (isShortBackchannel(normalized) && recent) {
+    const previous = readMessageContext(recent.userText.toLowerCase(), recent.userText);
     return {
       core: pick([
-        "うんうん、そこで止まらずに返してくれたの、ちゃんと気持ちが動いてる感じするよ〜。",
-        "そっかそっか。短い返事の中にも、まだ残ってるものがありそうだね。",
-        "ちゃんと聞いてるよ〜。今の相づちは、少し考えながら返してくれた感じがする。"
+        `うんうん、${previous.topic}の続きとして受け取ったよ〜。`,
+        `そっかそっか。${previous.topic}のこと、まだ少し心に残ってる感じかな。`,
+        `ちゃんと聞いてるよ〜。${previous.focus}のあたりを、今もそっと見てる感じがする。`
       ]),
       detail: styleDetail({
-        listener: "短い言葉の奥に、まだ少し残ってる気配があるよ。",
-        chatty: "こういう間の返事も、会話の大事なところだよ。",
-        coach: "今日は答えを出さなくても満点だよ。"
+        listener: "短い返事でも、そこで止まらず返してくれたこと自体がちゃんと会話だよ。",
+        chatty: "こういう間の返事にも、今の気分が少しにじむことあるよね。",
+        coach: "今日は答えを急がなくて大丈夫。出てきた分だけで十分だよ。"
       }),
       question: pick([
-        "今の気持ち、近いのは「まだ残ってる」「少し軽くなった」「言葉待ち」のどれ？",
-        "その沈黙っぽいところ、わしが横で待ってたら少し出てきそう？",
-        "今は、相づち多めと、そっと整理する感じ、どっちが楽？"
+        "今の気持ちは、まだ残ってる感じと少し軽くなった感じ、どっちに近いかな？",
+        `${previous.topic}の中で、今ふっと浮かんでる場面はあるかな？`,
+        "今は相づち多めでいるのと、そっと整理するの、どっちが楽かな？"
       ])
     };
   }
 
-  if (hasAny(normalized, ["失敗", "ミス", "嫌だ", "嫌", "もう何もかも", "最悪", "つら", "辛", "しんど", "落ち込", "何にもない", "何もない", "だめ", "ダメ", "無理", "泣", "悲しい", "寂しい", "さみしい"])) {
+  if (hasAny(normalized, ["失敗", "ミス", "嫌だ", "嫌", "もう何もかも", "最悪", "つら", "辛", "しんど", "落ち込", "何にもない", "何もない", "だめ", "ダメ", "無理", "泣", "悲しい", "寂しい", "さみしい", "言えな", "押され", "声かけづら", "機嫌悪"])) {
     return {
-      core: "そういう日もあるよね〜。それはつらかったね。よくここまで来たよ。",
-      detail: `${name}、それだけ重たかったのに言葉にできたの、ほんとにえらいよ。${characterCatchphrase(character)}`,
+      core: `${context.phrase}、かなり心に重たく残ってるんだね。`,
+      detail: `${name}がつらいって感じるのは自然だよ。そんな中で話してくれたの、わしはちゃんと受け取ったよ。`,
       question: pick([
-        "そのつらさ、いちばん刺さってるのは失敗そのもの？それともその後の気持ち？",
+        `${context.topic}の中で、いちばん刺さってるのは出来事そのものかな、その後の気持ちかな？`,
         "今いちばんほしかった言葉って、どんな言葉だったと思う？",
-        "今日は誰かに責められた感じ？それとも自分で自分を責めちゃってる感じ？"
+        "今日は誰かに責められた感じかな、それとも自分で自分を責めちゃってる感じかな？"
       ])
     };
   }
 
   if (hasAny(normalized, ["どうしよう", "迷", "悩", "決められ", "わからない"])) {
     return {
-      core: "迷ってる感じがするね〜。すぐ答えを出さなくても大丈夫だよ。",
-      detail: `${name}が迷うのは、それだけ雑に扱いたくないものがあるからかもしれないね。`,
+      core: `${context.phrase}のことで、まだ決めきれない感じがあるんだね〜。`,
+      detail: `${name}が迷うのは、それだけ雑に扱いたくないものがあるからかもしれないよ。`,
       question: pick([
         "その迷いの中で、少しでも守りたいものは何っぽい？",
-        "どっちを選んでも不安が残る感じ？それとも決める元気がない感じ？",
+        "どっちを選んでも不安が残る感じかな、それとも決める元気がない感じかな？",
         "今は答えより、気持ちを並べるところからやってみる？"
       ])
     };
@@ -392,51 +394,51 @@ function understandMessage(text) {
 
   if (hasAny(normalized, ["たぶん", "なんとなく", "かも", "気がする"])) {
     return {
-      core: "まだはっきりしてない感じなんだね〜。",
+      core: `${context.phrase}って、まだはっきり言い切れない感じなんだね〜。`,
       detail: styleDetail({
-        listener: "そのままでも大丈夫。言葉になってるところから聞くよ。",
+        listener: "その曖昧さのままでも大丈夫。言葉になってるところから聞くよ。",
         chatty: "こういう曖昧な感じも、ちゃんと心の声だよ。",
         coach: "今日は仮の気持ちでいいよ。ちゃんと決めなくて満点。"
       }),
       question: pick([
-        "そのぼんやりした感じ、重い？それともふわふわしてる？",
+        "そのぼんやりした感じは、重いのとふわふわしてるの、どっちに近いかな？",
         "言葉にするとしたら、近いのは不安・疲れ・期待のどれ？",
-        "まだ輪郭がないまま、もう少し置いてみる？"
+        "その曖昧な感じは、胸のあたりにあるかな、頭の中でぐるぐるしてるかな？"
       ])
     };
   }
 
   if (hasAny(normalized, ["嬉しい", "うれしい", "楽しい", "できた", "成功", "よかった"])) {
     return {
-      core: "それ、よかったね〜。ちゃんと喜んでいいやつだよ。",
-      detail: `${name}が少し軽くなったなら、わしまでうれしい。ちゃんと受け取っていい喜びだよ。`,
+      core: `${context.phrase}っていう嬉しいことがあったんだね〜。`,
+      detail: `${name}が少し明るい気持ちになれたなら、わしまでうれしいよ。ちゃんと受け取っていい喜びだよ。`,
       question: pick([
         "その嬉しさ、誰かに話したかった感じ？",
         "いちばんよかった瞬間はどこだった？",
-        "その喜び、今は静かに味わいたい？それとももっと話したい？"
+        "その喜びは、今は静かに味わいたい感じかな、それとももっと話したい感じかな？"
       ])
     };
   }
 
   if (hasAny(normalized, ["むかつ", "腹立", "イライラ", "怒", "もやもや", "モヤモヤ"])) {
     return {
-      core: "そっか〜。それは心がざわざわするよね。",
+      core: `${context.phrase}で、心がざわざわしてるんだね。`,
       detail: "そのざわざわは、ちゃんと嫌だったよって心が教えてくれてるのかも。無理にきれいにしなくていいよ。",
       question: pick([
-        "それは悔しさに近い？悲しさに近い？",
-        "残ってる棘は、言葉の棘？態度の棘？出来事そのものの棘？",
-        "今は怒りを出したい？それともなだめてほしい？"
+        "それは悔しさに近いかな、悲しさに近いかな？",
+        "残ってる棘は、言葉の棘と態度の棘、どっちに近い？",
+        "今は怒りを出したい感じかな、それともなだめてほしい感じかな？"
       ])
     };
   }
 
   if (hasAny(normalized, ["お願い", "助け", "手伝", "一緒に", "相談"])) {
     return {
-      core: "もちろんだよ。一人で抱えなくていいよ〜。",
-      detail: `${name}が助けてって言えたの、かなり大事な一歩だよ。もうそこで満点。`,
+      core: `${context.phrase}って言ってくれたんだね。もちろん、一人で抱えなくていいよ〜。`,
+      detail: `${name}が相談したいって言えたの、かなり大事な一歩だよ。ここでは急いで解決しなくて大丈夫。`,
       question: pick([
-        "今ほしい助けは、話を聞くこと？一緒に考えること？",
-        "まず軽くしたいのは、気持ち？予定？人間関係？",
+        "今ほしいのは、まず話を受け止めてもらうことかな、一緒に考えることかな？",
+        "まず軽くしたいのは、気持ちと予定と人間関係のどれに近い？",
         "今の重さを10段階でいうと、どれくらい？"
       ])
     };
@@ -444,34 +446,34 @@ function understandMessage(text) {
 
   if (hasAny(normalized, ["おすすめ", "選んで", "どっち", "比較", "決めて"])) {
     return {
-      core: "選ぶ系だね〜。迷うのもちゃんと頑張ってる証拠だよ。",
+      core: `${context.phrase}で、選ぶところに立ってるんだね〜。`,
       detail: "たぶん今は、正解よりも後悔したくない気持ちが強いのかもしれないね。",
       question: pick([
         "心が少しゆるむのは、どっちに近い？",
         "選ぶ時にいちばん怖いのは、失敗？損すること？誰かの反応？",
-        "今は決めたい？それとも候補を並べたい？"
+        "今は決めたい感じかな、それとも候補を並べたい感じかな？"
       ])
     };
   }
 
   if (hasAny(normalized, ["？", "?", "かな", "ですか", "どう", "なに", "何"])) {
     return {
-      core: "うんうん、そこ気になるよね〜。",
+      core: `${context.phrase}が気になってるんだね〜。`,
       detail: "疑問にできた時点で、もう少し楽になりたい気持ちが出てきてるのかも。",
       question: pick([
-        "その疑問、答えがほしい感じ？それとも不安をほどきたい感じ？",
+        "その疑問は、答えがほしい感じかな、それとも不安をほどきたい感じかな？",
         "今わかっていることを一緒に並べてみる？",
         "そのもやっと、真ん中にあるのはどんな感じ？"
       ])
     };
   }
 
-  if (hasAny(normalized, ["報告", "聞いて", "今日", "さっき", "今"])) {
+  if (hasAny(normalized, ["報告", "聞いて", "さっき"])) {
     return {
-      core: "聞いてるよ〜。ちゃんと話してくれてありがとう。",
-      detail: `${name}にとって、そこが大きかったんだね。報告したくなるくらい心に残ったんだと思うよ。`,
+      core: `${context.phrase}のこと、話してくれたんだね。ちゃんと聞いてるよ〜。`,
+      detail: `${name}にとって、そこが大きかったんだね。人に話したくなるくらい心に残ったんだと思うよ。`,
       question: pick([
-        "その出来事、今は嬉しい寄り？疲れた寄り？",
+        "その出来事は、今は嬉しい寄りかな、疲れた寄りかな？",
         "話してみて、少し軽くなった？",
         "そこからまだ残ってる気持ちはある？"
       ])
@@ -494,12 +496,11 @@ function understandMessage(text) {
     };
   }
 
-  const context = readMessageContext(normalized);
   return {
     core: pick([
-      `${context.topic}、ちゃんと受け取ったよ〜。`,
-      `${context.topic}が、今の心の中で少し場所を取ってる感じがするね。`,
-      `うんうん、${context.topic}のことを話してくれたんだね。`
+      `${context.phrase}のこと、ちゃんと受け取ったよ〜。`,
+      `${context.phrase}が、今の心の中で少し場所を取ってる感じがするね。`,
+      `うんうん、${context.phrase}って話してくれたんだね。`
     ]),
     detail: styleDetail({
       listener: `${name}の言葉からは、${context.reading}感じがするよ。急いで整えなくて大丈夫。`,
@@ -523,7 +524,7 @@ function hasAny(text, words) {
   return words.some((word) => text.includes(word));
 }
 
-function readMessageContext(text) {
+function readMessageContext(text, rawText = text) {
   const topicProfiles = [
     {
       words: ["仕事", "職場", "上司", "会社", "バイト", "残業", "会議", "ミス"],
@@ -590,18 +591,50 @@ function readMessageContext(text) {
   const matched = topicProfiles.find((profile) => hasAny(text, profile.words));
   const topic = matched?.topic || "その話";
   const focus = matched?.focus || "心に残っているところ";
+  const phrase = extractConcretePhrase(rawText, matched);
   const baseQuestions = matched?.questions || [
     "その話の中で、今いちばん温度が残ってるのはどこ？",
-    "話してみて、気持ちは少し軽い？それともまだ胸のあたりにある？",
+    "話してみて、気持ちは少し軽い感じかな、それともまだ胸のあたりにあるかな？",
     "そこにある気持ち、近いのは安心・不安・疲れ・楽しさのどれ？"
   ];
 
   return {
     topic,
     focus,
+    phrase,
     reading: readFeelingTexture(text),
     questions: baseQuestions
   };
+}
+
+function extractConcretePhrase(rawText, matchedProfile) {
+  const clean = String(rawText || "")
+    .replace(/\s+/g, " ")
+    .replace(/[。！？!?]+$/g, "")
+    .trim();
+
+  if (!clean) {
+    return matchedProfile?.topic || "その話";
+  }
+
+  if (clean.length <= 24) {
+    return clean;
+  }
+
+  const clauses = clean.split(/[、。…,.，]/).map((item) => item.trim()).filter(Boolean);
+  const keywordWords = matchedProfile?.words || [];
+  const matchedClause =
+    clauses.find((clause) => keywordWords.some((word) => clause.includes(word))) ||
+    clauses.find((clause) => /した|された|言え|言っ|なった|あった|いる|ある/.test(clause)) ||
+    clauses[0];
+
+  if (!matchedClause) {
+    return matchedProfile?.topic || "その話";
+  }
+
+  return matchedClause.length <= 28
+    ? matchedClause
+    : `${matchedClause.slice(0, 27).replace(/[、。！？?]*$/, "")}…`;
 }
 
 function readFeelingTexture(text) {
@@ -669,12 +702,13 @@ function buildReply({ character: targetCharacter, tone, core, detail, question }
     parts.push(followUp);
   }
 
+  parts.push(pick(warmClosings(targetCharacter)));
   const reply = shapeReplyLength(parts.join(" "), targetCharacter);
   return targetCharacter.useEmoji ? `${reply} ${pick(["☺️", "✨", "🌿"])}` : reply;
 }
 
 function rotateQuestion(question) {
-  const rendered = renderTemplate(question, character);
+  const rendered = normalizeSingleQuestion(renderTemplate(question, character));
 
   if (!recentQuestions.includes(rendered)) {
     recentQuestions.push(rendered);
@@ -686,9 +720,44 @@ function rotateQuestion(question) {
     extraListeningPrompts(character).filter((item) => !recentQuestions.includes(item))
   ) || "今の気持ち、形でいうと丸い？とげとげ？重たい石みたい？";
 
-  recentQuestions.push(fallback);
+  const normalizedFallback = normalizeSingleQuestion(fallback);
+  recentQuestions.push(normalizedFallback);
   recentQuestions = recentQuestions.slice(-5);
-  return fallback;
+  return normalizedFallback;
+}
+
+function normalizeSingleQuestion(question) {
+  const markIndexes = [];
+  for (let index = 0; index < question.length; index += 1) {
+    if (question[index] === "？" || question[index] === "?") {
+      markIndexes.push(index);
+    }
+  }
+
+  if (markIndexes.length <= 1) {
+    return question;
+  }
+
+  return question
+    .split("")
+    .map((char, index) => {
+      if ((char === "？" || char === "?") && index !== markIndexes.at(-1)) {
+        return "、";
+      }
+      return char;
+    })
+    .join("")
+    .replace(/、\s*それとも/g, "、それとも");
+}
+
+function warmClosings(targetCharacter) {
+  const name = callName(targetCharacter);
+  return [
+    "無理に答えなくてもいいからね。",
+    "話せる範囲で、ここに置いていってね。",
+    "急がなくていいよ、わしはここで聞いてるからね。",
+    `${name}のペースで大丈夫だよ。`
+  ];
 }
 
 function makeFollowUpQuestion(targetCharacter, tone) {
@@ -698,7 +767,7 @@ function makeFollowUpQuestion(targetCharacter, tone) {
       "その気持ち、色でいうと何色に近い？",
       "今の心、ぎゅっとしてる？ふわふわしてる？それとも空っぽに近い？",
       "言葉にするなら、ひとことで「疲れ」「不安」「さみしさ」のどれが近い？",
-      "わしには、今は相づち多めでいてほしい？それとも少しほどいてほしい？",
+      "今は相づち多めが楽かな、それとも少しほどく感じが楽かな？",
       `${name}の中の小さい声、今なんて言ってそう？`
     ],
     cool: [
@@ -738,7 +807,7 @@ function endsWithQuestion(text) {
 
 function shapeReplyLength(text, targetCharacter) {
   const clean = text.replace(/\s+/g, " ").trim();
-  const limit = 175;
+  const limit = 230;
 
   if (clean.length <= limit) {
     return clean;
