@@ -462,6 +462,15 @@ function understandMessage(text) {
     };
   }
 
+  if (hasAny(normalized, ["不安", "心配", "怖", "こわ", "ざわざわ", "ザワザワ", "そわそわ"])) {
+    return {
+      noOpener: true,
+      softLanding: false,
+      core: `あ〜、${name}、不安な気持ちがふっと出てきたんだね。そういう日もあるよね〜。`,
+      detail: `理由をきれいに説明できなくても大丈夫だよ。今ここまで過ごして、ねいねいに言葉をくれた時点で十分えらいよ。`
+    };
+  }
+
   if (hasAny(normalized, ["死にそう", "死にたい", "消えたい", "もうダメ", "もうだめ", "何にもない", "何もない", "だめ", "ダメ", "自分なんて", "価値ない"])) {
     return {
       noOpener: true,
@@ -560,7 +569,7 @@ function understandMessage(text) {
     };
   }
 
-  if (hasAny(normalized, ["？", "?", "かな", "ですか", "どう", "なに", "何"])) {
+  if (hasAny(normalized, ["？", "?", "ですか", "どう", "なに", "何"])) {
     return {
       core: "そこ、気になるよね〜。疑問が出てくる時点で、ちゃんと前に進もうとしてる感じあるよ。",
       detail: `${name}、急いで答えを出さなくても大丈夫。わかるところから一緒に見ればいいよ。`,
