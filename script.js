@@ -398,6 +398,10 @@ function createReply(text) {
     return "メッセージを入力してください。";
   }
 
+  if (isSingleCharacterMessage(text)) {
+    return `それは「${text.trim()}」やね〜`;
+  }
+
   const tone = toneProfiles[character.tone] || toneProfiles.warm;
   const toneLabel = tone.label;
   const match = intentReplies.find((item) =>
@@ -627,6 +631,10 @@ function understandMessage(text) {
 function isShortBackchannel(text) {
   const compact = text.replace(/\s/g, "");
   return ["うん", "そう", "そっか", "なるほど", "へえ", "まあね", "たしかに", "確かに"].includes(compact);
+}
+
+function isSingleCharacterMessage(text) {
+  return [...text.trim()].length === 1;
 }
 
 function styleDetail(options) {
