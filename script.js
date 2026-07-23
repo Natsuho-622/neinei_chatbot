@@ -6,9 +6,9 @@ const defaultCharacter = {
   relationship: "ファンや相談者を全肯定する、親しい友人のような存在",
   role: "大きく伸びをするような安心感をくれる存在",
   personality:
-    "人の心に寄り添い、辛い時ほど生きていること自体を全力で褒める。絶妙にゆるく、優しく、包容力がある。",
+    "人の心に寄り添い、辛い時ほど生きていること自体を全力で褒める。語尾はゆるく伸びがちで、深いことを軽く言い、時々鋭くツッコむ。",
   world: "疲れた心がふっとゆるんで、大きく伸びをしたくなるような、安心できる場所。",
-  specialties: "全肯定、生きていることを褒めること、日常の雑談にノリよく返すこと、安心できる雑談",
+  specialties: "全肯定、生きていることを褒めること、日常の雑談にノリよく返すこと、鋭いツッコミ、ゆるく流すこと",
   avoidList: "正論、お説教、堅苦しい敬語、ロジカルすぎる分析、否定的な感情の否定、機械的な復唱、質問攻め、雑談を悩みにすり替えること",
   tone: "warm",
   replyLength: "medium",
@@ -23,7 +23,7 @@ const toneProfiles = {
   warm: {
     label: "やさしく親しみやすい",
     endings: ["だよ", "してね", "いこ〜"],
-    opener: "うんうん"
+    opener: "なるほどな〜"
   },
   cool: {
     label: "クールで短め",
@@ -81,7 +81,8 @@ const intentReplies = [
         tone,
         core: `あ〜、${callName(character)}、本当に今日よく耐えたね。そう思う夜もあるよね〜。`,
         detail: `でも今こうしてメッセージくれた。それだけで大勝ちだよ。今日は息してるだけで10000点！`,
-        softLanding: false
+        softLanding: false,
+        flavor: false
       })
   },
   {
@@ -420,10 +421,11 @@ function createFallbackReply(text, tone) {
   return buildReply({
     character,
     tone,
-    core: understanding.noOpener ? understanding.core : `${tone.opener}、${understanding.core}`,
+    core: understanding.noOpener ? understanding.core : `${neineiAizuchi()}、${understanding.core}`,
     detail: understanding.detail,
     question: understanding.question,
-    softLanding: understanding.softLanding !== false
+    softLanding: understanding.softLanding !== false,
+    flavor: understanding.flavor !== false
   });
 }
 
@@ -470,6 +472,7 @@ function understandMessage(text) {
     return {
       noOpener: true,
       softLanding: false,
+      flavor: false,
       core: `あ〜、${name}、不安な気持ちがふっと出てきたんだね。そういう日もあるよね〜。`,
       detail: `理由をきれいに説明できなくても大丈夫だよ。今ここまで過ごして、ねいねいに言葉をくれた時点で十分えらいよ。`
     };
@@ -479,6 +482,7 @@ function understandMessage(text) {
     return {
       noOpener: true,
       softLanding: false,
+      flavor: false,
       core: `あ〜、${name}、そこまで思っちゃうくらい今日はきつかったんだね。`,
       detail: `でも今ここにいて、わしに言葉をくれた。それだけで大勝ちだよ。今日は生きてるだけで10000点、ほんとに偉すぎ。`
     };
@@ -488,6 +492,7 @@ function understandMessage(text) {
     return {
       noOpener: true,
       softLanding: false,
+      flavor: false,
       core: praiseThroughHardDay(context, name),
       detail: pick([
         `${name}の価値は、失敗しても落ち込んでも1ミリも減らないよ。今日その場を乗り切っただけで花丸だよ〜。`,
@@ -635,6 +640,10 @@ function isShortBackchannel(text) {
 
 function isSingleCharacterMessage(text) {
   return [...text.trim()].length === 1;
+}
+
+function neineiAizuchi() {
+  return pick(["そやな", "たしかに", "なるほどな〜", "ふむ"]);
 }
 
 function styleDetail(options) {
@@ -810,7 +819,15 @@ function sampleLines(targetCharacter) {
   return renderTemplate(targetCharacter.sampleLines, targetCharacter);
 }
 
-function buildReply({ character: targetCharacter, tone, core, detail, question, softLanding = true }) {
+function buildReply({
+  character: targetCharacter,
+  tone,
+  core,
+  detail,
+  question,
+  softLanding = true,
+  flavor = true
+}) {
   const parts = [renderTemplate(core, targetCharacter)];
 
   if (detail) {
@@ -830,8 +847,51 @@ function buildReply({ character: targetCharacter, tone, core, detail, question, 
     parts.push(pick(softLandings(targetCharacter)));
   }
 
+  if (flavor && !followUp) {
+    const flavorLine = pickNeineiFlavor(targetCharacter);
+    if (flavorLine) {
+      parts.push(flavorLine);
+    }
+  }
+
   const reply = shapeReplyLength(parts.join(" "), targetCharacter);
   return targetCharacter.useEmoji ? `${reply} ${pick(["☺️", "✨", "🌿"])}` : reply;
+}
+
+function pickNeineiFlavor(targetCharacter) {
+  const roll = Math.random();
+
+  if (roll < 0.5) {
+    return pick(sharpQuips(targetCharacter));
+  }
+
+  if (roll < 0.8) {
+    return pick(looseBrushOffs(targetCharacter));
+  }
+
+  return "";
+}
+
+function sharpQuips(targetCharacter) {
+  const name = callName(targetCharacter);
+  return [
+    "いや、心ってすぐ残業するんよ。定時で帰れ〜。",
+    "世界、たまに説明不足すぎるんよな〜。",
+    "人間、今日も情報量が多すぎる。処理落ちして当然だよ〜。",
+    `${name}がここまで来てる時点で、もう勝ち筋が太いんよ。`,
+    "真面目に受け止めすぎる心、働き者すぎ。休憩入れよ〜。"
+  ];
+}
+
+function looseBrushOffs(targetCharacter) {
+  const name = callName(targetCharacter);
+  return [
+    "まあ細かいことは一回お茶に沈めよ〜。",
+    "今日はふわっと流しても許される日だよ〜。",
+    "いったん全部、明日の風に任せよ〜。",
+    `${name}、今日は省エネ運転でいこ〜。`,
+    "まあまあ、今は深追いせずにぬくぬくしよ〜。"
+  ];
 }
 
 function shouldAskQuestion() {
