@@ -310,6 +310,7 @@ let character = loadCharacter();
 let conversationMemory = [];
 let recentQuestions = [];
 let lastWeatherLocation = null;
+let pendingWeatherText = "";
 
 function loadCharacter() {
   const saved = window.localStorage.getItem("character-chatbot-settings");
@@ -394,7 +395,7 @@ async function createReply(text) {
     return `それは「${text.trim()}」やね〜`;
   }
 
-  if (isWeatherMessage(normalized)) {
+  if (isWeatherMessage(normalized) || shouldContinueWeatherConversation(text)) {
     return createWeatherReply(text);
   }
 
@@ -475,13 +476,33 @@ const weatherLocations = [
 ];
 
 function isWeatherMessage(text) {
-  return hasAny(text, ["天気", "雨", "晴れ", "曇", "くもり", "暑", "寒", "気温", "湿度", "台風"]);
+  return hasAny(text, [
+    "天気",
+    "雨",
+    "あめ",
+    "晴れ",
+    "はれ",
+    "曇",
+    "くもり",
+    "暑",
+    "あつ",
+    "寒",
+    "さむ",
+    "気温",
+    "湿度",
+    "台風"
+  ]);
+}
+
+function shouldContinueWeatherConversation(text) {
+  return Boolean(pendingWeatherText && findWeatherLocation(text));
 }
 
 async function createWeatherReply(text) {
   const location = findWeatherLocation(text) || lastWeatherLocation;
 
   if (!location) {
+    pendingWeatherText = text;
     return pick([
       "暑い寒いとか雨晴れの話、ちゃんと空の話として聞きたいね〜。どこの天気を見ればいい？東京とか大阪みたいに教えて〜。",
       "そやな、天気って今日の気分に直撃するよね〜。場所がわかればこの後の空模様見てくるよ。",
@@ -490,10 +511,12 @@ async function createWeatherReply(text) {
   }
 
   lastWeatherLocation = location;
+  const weatherContext = pendingWeatherText ? `${pendingWeatherText} ${text}` : text;
+  pendingWeatherText = "";
 
   try {
     const weather = await fetchWeather(location);
-    return formatWeatherReply(text, location, weather);
+    return formatWeatherReply(weatherContext, location, weather);
   } catch {
     return `${location.name}の天気、今ちょっと取りに行けなかった〜。でも天気の話として聞いてるよ、暑い寒いって体に直で来るから侮れん。`;
   }
@@ -574,19 +597,35 @@ function formatWeatherTime(time) {
 }
 
 function weatherReaction(text, temperature, code) {
-  if (text.includes("暑") || temperature >= 30) {
+  if (text.includes("暑") || text.includes("あつ")) {
     return "暑さ、完全に体力泥棒だね〜。水分だけは味方につけよ。";
   }
 
-  if (text.includes("寒") || temperature <= 8) {
+  if (text.includes("寒") || text.includes("さむ")) {
     return "寒い日は体がぎゅっとなるよね〜。あったか装備で勝とう。";
   }
 
-  if (text.includes("雨") || isRainCode(code)) {
+  if (text.includes("雨") || text.includes("あめ")) {
     return "雨の日は足元と気分が持っていかれがち。空、仕事しすぎ〜。";
   }
 
-  if (text.includes("晴") || code === 0 || code === 1) {
+  if (text.includes("晴") || text.includes("はれ")) {
+    return "晴れの日は光だけで少し得した気分になるね〜。";
+  }
+
+  if (temperature >= 30) {
+    return "暑さ、完全に体力泥棒だね〜。水分だけは味方につけよ。";
+  }
+
+  if (temperature <= 8) {
+    return "寒い日は体がぎゅっとなるよね〜。あったか装備で勝とう。";
+  }
+
+  if (isRainCode(code)) {
+    return "雨の日は足元と気分が持っていかれがち。空、仕事しすぎ〜。";
+  }
+
+  if (code === 0 || code === 1) {
     return "晴れの日は光だけで少し得した気分になるね〜。";
   }
 
