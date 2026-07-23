@@ -1,7 +1,7 @@
 const defaultCharacter = {
   name: "ねいねい",
   recipientName: "ナツホさん",
-  firstPerson: "わし",
+  firstPerson: "ねいねい",
   recipientCallName: "〇〇",
   relationship: "ファンや相談者を全肯定する、親しい友人のような存在",
   role: "大きく伸びをするような安心感をくれる存在",
@@ -14,7 +14,7 @@ const defaultCharacter = {
   replyLength: "medium",
   conversationStyle: "listener",
   useEmoji: false,
-  catchphrase: "生きてるだけで〇〇さんの勝ち！",
+  catchphrase: "今日も生きたのでわしの勝ち！",
   sampleLines:
     "そういう日もあるよね〜\n大きく深呼吸して、伸びしてみよう〜\n新しく何かをしようと思わなくていいよ、続けるだけで今日は満点"
 };
@@ -49,10 +49,16 @@ const intentReplies = [
       buildReply({
         character,
         tone,
-        core: `${tone.opener}、${callName(character)}。今日も来てくれてえらいね〜。`,
-        detail:
-          "何か話してもいいし、ただここにいるだけでもいいよ。大きく深呼吸して、伸びしてみよう〜。",
-        question: "今の気分を色でいうと、どんな色っぽい？"
+        core: pick([
+          `やほ〜、${callName(character)}。来たね来たね〜。`,
+          `お、${callName(character)}だ〜。ねいねい今ちょうどゆるっとしてたよ。`,
+          `なるほどな〜、挨拶から入るタイプの日やね。礼儀、地味にえらい。`
+        ]),
+        detail: pick([
+          "なんかあった〜？それともただ来ただけでも全然いいよ〜。",
+          "ねいねいは今日のお菓子が当たりで、ちょっと機嫌いいよ〜。",
+          "まずは肩の力抜いてこ〜。ここ、急がない場所だからね。"
+        ])
       })
   },
   {
@@ -62,14 +68,14 @@ const intentReplies = [
         character,
         tone,
         core: pick([
-          `${callName(character)}、好きな人のことで胸がぎゅっとしてるんだね〜。`,
-          `恋愛で行き詰まると、自分まで足りない気がしてきちゃう時あるよね。`,
-          `振り向いてもらえない感じって、心がしょんぼりするよね〜。`
+          `そやな〜、好きな人の反応って心を振り回してくるよね。`,
+          `恋愛って、相手の一挙一動でこっちの天気変わりすぎ問題あるよ〜。`,
+          `振り向いてほしい時ほど、心が忙しくなるやつだね〜。`
         ]),
         detail: pick([
           `でもね、${callName(character)}は生きてるだけでこんなに素晴らしいんだよ。気づかないなんて相手は損やね♪`,
           `${callName(character)}の価値は、相手の反応で1ミリも減らないよ。好きになれる心があるだけで、もうめちゃくちゃ尊いよ〜。`,
-          `そんなに誰かを大事に思える${callName(character)}、ほんとに素敵だよ。今日はその優しさごと、わしが丸ごと褒めるね。`
+          `そんなに誰かを大事に思える${callName(character)}、ほんとに素敵だよ。今日はその優しさごと、ねいねいが丸ごと褒めるね。`
         ])
       })
   },
@@ -114,9 +120,8 @@ const intentReplies = [
       buildReply({
         character,
         tone: toneProfiles[character.tone] || toneProfiles.warm,
-        core: `${callName(character)}、今日も生きてスマホ開いて、わしに話しかけてくれた。もう十分すごいよ〜。`,
-        detail: "今は背中を押されたい日なのか、ただ横にいてほしい日なのか、どっちでも大丈夫だよ。",
-        question: "今ほしいのは、ぎゅっと応援される感じかな、静かにそばにいる感じかな？"
+        core: `${callName(character)}、応援ほしい日か〜。任せな、ねいねい応援団ひとりで開幕するよ〜。`,
+        detail: "今日ここまで来てる時点で、もうだいぶ粘ってる。えらい、ほんとにえらい。"
       })
   },
   {
@@ -127,26 +132,21 @@ const intentReplies = [
         tone,
         core: pick([
           "こちらこそ話してくれてありがとね〜。",
-          "うんうん、少しでもほっとできたならわしもうれしいよ。",
-          `${callName(character)}がここに来てくれたことが、もう満点だよ。`
+          "うんうん、少しでもほっとできたならねいねいもうれしいよ。",
+          `たしかに、ありがとって言える余白があるの、いい感じだよ〜。`
         ]),
-        detail: "ありがとうって返せるくらい、少し心に余白が戻ったのかもしれないね。",
-        question: "このまま同じ話を続けるのと、別の話にゆるっと行くの、今はどっちが楽かな？"
+        detail: "ねいねい、そういう小さいほっとする瞬間けっこう好き。"
       })
   },
   {
     patterns: ["好き", "ハマって", "推し", "趣味"],
-    reply: ({ character, tone }) =>
+    reply: ({ character, tone, text }) =>
       buildReply({
         character,
         tone,
-        core: pick([
-          "それ、いいね〜。好きなものの話は心が伸びする感じがするね。",
-          "その感じ、もっと聞きたいな〜。",
-          `${callName(character)}が好きって言えるもの、大事にしていいよ。`
-        ]),
-        detail: "理由になってなくても大丈夫。好きは好きで満点だよ。",
-        question: "その好きの中で、いちばん心がふわっとする瞬間はどこ？"
+        core: casualInterestReply(text),
+        detail: "理由がうまく言えなくても、好きは好きで成立するからね。そこ雑に強い。",
+        flavor: false
       })
   },
   {
@@ -156,12 +156,11 @@ const intentReplies = [
         character,
         tone,
         core: pick([
-          "ひまな時間もあるよね〜。ぼんやりしてていいよ。",
-          "何もしない時間、悪者にしなくていいよ〜。",
-          "じゃあ、わしとゆるっと雑談しよ〜。"
+          "ひまか〜。脳が床に寝転がってる時間やね。",
+          "退屈な時間って、地味に長いよね〜。時計だけ急に仕事しない。",
+          "じゃあ、ねいねいとだらっと雑談しよ〜。中身なくても全然あり。"
         ]),
-        detail: "新しいことを始めなくても、今ここにいるだけで今日は満点。",
-        question: "今のひまは、退屈なひま？それとも休みたいひま？"
+        detail: "何かしなきゃってならなくていいよ。ひまをひまのまま転がしとこ〜。"
       })
   },
   {
@@ -171,106 +170,90 @@ const intentReplies = [
         character,
         tone,
         core: pick([
-          "眠いなら、体が休みたがってるんだね〜。",
-          "無理にしゃきっとしなくて大丈夫だよ。",
+          "眠いか〜。体がもう閉店準備してるね。",
+          "ねむい時の人間、だいたい省エネ家電みたいになるよね〜。",
           "今日はもう、ふにゃっとしてていい日かもしれん。"
         ]),
-        detail: "大きく深呼吸して、伸びしてみよう〜。そのあとゆっくり力を抜こう。",
-        question: "眠いのにまだ起きてたい感じ？それとも眠れなくて困ってる感じ？"
+        detail: "まぶたが会議を終了しようとしてるなら、ねいねいは拍手で見送るよ〜。"
       })
   },
   {
     patterns: ["パスタ"],
-    reply: ({ character, tone }) =>
+    reply: ({ character, tone, text }) =>
       buildReply({
         character,
         tone,
-        core: pick([
-          "いいねぇ〜！美味しいパスタ食べた日は、それだけでもう大成功だよ〜。",
-          "パスタいいな〜！お腹も心も満たされるやつじゃん。",
-          "わ〜、美味しいパスタは強い！今日のハッピー確定だね〜。"
-        ]),
+        core: casualFoodReply(text),
         detail: pick([
           "そういう小さい幸せ、ちゃんと味わえたのめちゃくちゃいい日だよ。",
           "ねいねいまで一緒ににこにこしちゃうな〜。",
           "今日はその満たされた気分のまま、ゆるっと過ごそ〜。"
-        ])
+        ]),
+        flavor: false
       })
   },
   {
     patterns: ["飲み物", "コーヒー", "紅茶", "お茶", "カフェラテ", "パスタ", "おいしかった", "美味しかった", "おいしい", "美味しい", "食べたんだ", "飲んだ", "ホッと", "ほっと"],
-    reply: ({ character, tone }) =>
+    reply: ({ character, tone, text }) =>
       buildReply({
         character,
         tone,
-        core: pick([
-          "あ〜〜最高じゃん！そういうホッとする時間、たまらんよね〜。",
-          "いいねぇ〜！お腹と心が満たされる時間、めちゃくちゃ大事だよ。",
-          "わかる〜！お気に入りとか美味しいものって、それだけで一日を救ってくれるよね。"
-        ]),
+        core: casualFoodReply(text),
         detail: pick([
-          "自分のご機嫌を取れたなら、今日はもう大成功だよ〜。",
+          "そういう一口の幸せ、ちゃんと一日を救うからすごいよね〜。",
           "ねいねいまで一緒にほくほくした気分になっちゃうな〜。",
-          "その幸せ、ちゃんと味わっていいやつだよ。今日はハッピーの勝ち！"
-        ])
+          "おいしいって思えた瞬間、もう今日の中に勝ちがあるよ。強い。"
+        ]),
+        flavor: false
       })
   },
   {
     patterns: ["ラーメン"],
-    reply: ({ character, tone }) =>
+    reply: ({ character, tone, text }) =>
       buildReply({
         character,
         tone,
-        core: pick([
-          "わはは、夜遅くのラーメンは強いね〜。",
-          "夜のラーメン、背徳感込みでおいしいやつだね。",
-          "それはもう、心にしみるタイプのご褒美だよ〜。"
-        ]),
-        detail: "たまにはそういう満たされ方があってもいいよ。",
+        core: casualFoodReply(text),
+        detail: "背徳感込みでおいしいもの、あるよね〜。心にしみるタイプのご褒美だよ。",
+        flavor: false,
         question: "ちなみに何味だったの？"
       })
   },
   {
     patterns: ["お菓子", "アイス", "チョコ", "夜食", "食べちゃった"],
-    reply: ({ character, tone }) =>
+    reply: ({ character, tone, text }) =>
       buildReply({
         character,
         tone,
-        core: pick([
-          "わはは、夜の甘いものってなんであんなにおいしいんだろうね〜。",
-          "食べちゃったか〜。でもお腹と心が満たされたなら大成功だよ。",
-          "それは今日を乗り切った体からのごほうび要請だったのかもね〜。"
+        core: casualFoodReply(text),
+        detail: pick([
+          "甘いものって、心の非常ボタンみたいな時あるよね〜。押してよし。",
+          "お腹と心がちょっと満たされたなら、それはもう立派な作戦勝ちだよ〜。",
+          "そこで自分を責めるより、おいしかった記憶を保護しよ。大事な文化財。"
         ]),
-        detail: `${callName(character)}、責めなくて大丈夫。今日は満たされたなら大勝利だよ〜。`
+        flavor: false
       })
   },
   {
     patterns: ["お腹", "ごはん", "ご飯", "食べ", "カフェ", "おいしい"],
-    reply: ({ character, tone }) =>
+    reply: ({ character, tone, text }) =>
       buildReply({
         character,
         tone,
-        core: pick([
-          "いいね〜、食べものの話はだいぶ大事だよ。",
-          "それ聞いたら、わしもちょっとお腹すいてきたよ〜。",
-          "ちゃんと食べようとしてるだけでえらい。"
-        ]),
-        detail: "温かいものでも、好きなものでも、体がほっとするやつにしよ。",
-        question: "今はやさしい味がいい？それとも元気出る味がいい？"
+        core: casualFoodReply(text),
+        detail: "食べものの話、ねいねいかなり好き。生活って結局そこに宿るんよな〜。",
+        flavor: false
       })
   },
   {
     patterns: ["天気", "雨", "暑い", "寒い", "晴れ"],
-    reply: ({ character, tone }) =>
+    reply: ({ character, tone, text }) =>
       buildReply({
         character,
         tone,
-        core: pick([
-          "天気の話っていいね〜。外の空気で気分がふっと変わる日あるよね。",
-          "晴れでも雨でも、空を感じた日はちょっと心が動くよね〜。",
-          "お散歩できた日なら、それだけで今日はかなりいい感じじゃん。"
-        ]),
-        detail: "そういう日常のぽかぽか、ねいねいも一緒に味わいたいな〜。"
+        core: casualWeatherReply(text),
+        detail: "天気に気分を持っていかれるの、人間の仕様すぎる。まあ空がでかいから仕方ないよ〜。",
+        flavor: false
       })
   },
   {
@@ -280,7 +263,7 @@ const intentReplies = [
         character,
         tone,
         core: `${character.name}だよ〜。しんどい日も、なんでもない日も、ここでゆるっと話を聞く存在だよ。`,
-        detail: `わしは正論より先に、${callName(character)}の気持ちを受け取りたいんだ。`,
+        detail: `ねいねいは正論より先に、${callName(character)}の気持ちを受け取りたいんだ。`,
         question: "今日はどんな話から、ゆるっと始めよっか？"
       })
   },
@@ -335,7 +318,14 @@ function loadCharacter() {
   }
 
   try {
-    return { ...defaultCharacter, ...JSON.parse(saved), replyLength: "medium" };
+    const parsed = { ...defaultCharacter, ...JSON.parse(saved), replyLength: "medium" };
+    if (parsed.name === "ねいねい" && parsed.firstPerson === "わし") {
+      parsed.firstPerson = "ねいねい";
+    }
+    if (parsed.name === "ねいねい" && parsed.catchphrase === "生きているだけで今日はねいねいの勝ち！") {
+      parsed.catchphrase = defaultCharacter.catchphrase;
+    }
+    return parsed;
   } catch {
     return { ...defaultCharacter };
   }
@@ -484,7 +474,7 @@ function understandMessage(text) {
       softLanding: false,
       flavor: false,
       core: `あ〜、${name}、そこまで思っちゃうくらい今日はきつかったんだね。`,
-      detail: `でも今ここにいて、わしに言葉をくれた。それだけで大勝ちだよ。今日は生きてるだけで10000点、ほんとに偉すぎ。`
+      detail: `でも今ここにいて、ねいねいに言葉をくれた。それだけで大勝ちだよ。今日は生きてるだけで10000点、ほんとに偉すぎ。`
     };
   }
 
@@ -497,8 +487,21 @@ function understandMessage(text) {
       detail: pick([
         `${name}の価値は、失敗しても落ち込んでも1ミリも減らないよ。今日その場を乗り切っただけで花丸だよ〜。`,
         `今日は新しく頑張らなくていいよ。息して、ゴロゴロして、あったかくしてるだけで大勝利。`,
-        `そんな日でもここまで来た${name}、ほんとに偉い。わしはそこを全力で褒めたいよ〜。`
+        `そんな日でもここまで来た${name}、ほんとに偉い。ねいねいはそこを全力で褒めたいよ〜。`
       ])
+    };
+  }
+
+  if (isCasualDailyMessage(normalized)) {
+    return {
+      noOpener: true,
+      core: casualDailyReply(text),
+      detail: pick([
+        "そういう何気ない話、ねいねい好きだよ〜。生活の温度がある。",
+        "大事件じゃない話ほど、あとからじわっと効くんよな〜。",
+        "今日はそのくらいの軽さで話してくれるの、ちょうどいいよ。"
+      ]),
+      flavor: false
     };
   }
 
@@ -606,7 +609,7 @@ function understandMessage(text) {
     return {
       core: pick([
         "ふふ、それはちょっといいね〜。",
-        "そういうの、わし地味に好きだよ。",
+        "そういうの、ねいねい地味に好きだよ。",
         "今のちょっと笑ったよ〜。"
       ]),
       detail: "笑えるところがあるって、今日はちょっと救いだね。",
@@ -620,17 +623,153 @@ function understandMessage(text) {
 
   return {
     core: pick([
-      "そういう感じの日なんだね〜。",
-      "そっかそっか、ねいねいはちゃんとここにいるよ〜。",
-      "話してくれてありがとね。ここに置いてくれたの、ちゃんと受け取ったよ。"
+      "ふむ、そう来たか〜。",
+      "そやな、その感じでぽんって来る日あるよね〜。",
+      "なるほどな〜、今の一言にちょっと温度あるね。"
     ]),
     detail: styleDetail({
-      listener: `${name}、言葉がまとまってなくても全然大丈夫だよ。`,
-      chatty: "こういう何気ない話も、ねいねいは好きだよ〜。",
-      coach: "今日は答えを出さなくても満点。ここまで来ただけで十分だよ。"
+      listener: `${name}、きれいに説明しなくていいよ。雑に置いた言葉も、ちゃんと会話だからね〜。`,
+      chatty: "こういう何気ない話も、ねいねいは好きだよ〜。むしろ本編まである。",
+      coach: "今日は答えを出さなくてもいいよ。いったん言葉にした、それで進んでる。"
     }),
     question: pick(context.questions)
   };
+}
+
+function isCasualDailyMessage(text) {
+  return hasAny(text, [
+    "映画",
+    "ドラマ",
+    "アニメ",
+    "漫画",
+    "マンガ",
+    "音楽",
+    "曲",
+    "ゲーム",
+    "買った",
+    "届いた",
+    "行った",
+    "見た",
+    "観た",
+    "読んだ",
+    "遊んだ",
+    "散歩",
+    "カフェ",
+    "服",
+    "ネイル",
+    "写真"
+  ]);
+}
+
+function casualDailyReply(text) {
+  const thing = findFirstKeyword(text, [
+    "映画",
+    "ドラマ",
+    "アニメ",
+    "漫画",
+    "マンガ",
+    "音楽",
+    "曲",
+    "ゲーム",
+    "カフェ",
+    "散歩",
+    "服",
+    "ネイル",
+    "写真"
+  ]);
+
+  if (thing) {
+    return pick([
+      `${thing}の話いいね〜。そういう日常のちょっとした楽しみ、かなり栄養あるよ。`,
+      `お、${thing}か〜。生活に小さい彩り入れてる感じ、ねいねい好きだよ〜。`,
+      `${thing}って、その時の気分ごと残る感じあるよね。地味に侮れん。`
+    ]);
+  }
+
+  return pick([
+    "お、日常報告だ〜。そういう小さい出来事を持ってきてくれるのいいね。",
+    "たしかに、そういう何気ないことって話したくなる時あるよね〜。",
+    "なるほどな〜。大事件じゃなくても、今日のかけらとしては十分おもしろいよ。"
+  ]);
+}
+
+function casualInterestReply(text) {
+  const thing = findFirstKeyword(text, [
+    "カフェ巡り",
+    "カフェ",
+    "推し",
+    "映画",
+    "ドラマ",
+    "アニメ",
+    "漫画",
+    "マンガ",
+    "音楽",
+    "曲",
+    "ゲーム",
+    "散歩",
+    "服",
+    "ネイル"
+  ]);
+
+  if (thing) {
+    return pick([
+      `お、${thing}好きなんだ〜。いいね、日々にちゃんと楽しみの逃げ道あるの強いよ。`,
+      `${thing}が好きなの、かなりいいね〜。生活の中に小さい灯り置いてる感じする。`,
+      `なるほどな〜、${thing}にハマるのわかる気がする。気分の置き場所になるやつだ。`
+    ]);
+  }
+
+  return pick([
+    "お、それ好きなんだ〜。いいね、好きの話は空気がちょっと明るくなるよ〜。",
+    "なるほどな〜、ハマってるものがあるの強い。日々の避難所じゃん。",
+    "好きって言えるもの、ちゃんと持ってるのいいね〜。人生の小さい灯りだよ。"
+  ]);
+}
+
+function casualFoodReply(text) {
+  const item = findFirstKeyword(text, [
+    "パスタ",
+    "ラーメン",
+    "カフェラテ",
+    "コーヒー",
+    "紅茶",
+    "お茶",
+    "飲み物",
+    "お菓子",
+    "アイス",
+    "チョコ",
+    "夜食",
+    "ごはん",
+    "ご飯"
+  ]);
+
+  if (item) {
+    return pick([
+      `あ〜〜${item}いいね！それは心がちょっと勝つやつだよ〜。`,
+      `${item}か〜、最高じゃん。おいしいもの、だいたい正義。`,
+      `なるほどな〜、${item}で回復する日あるよね。胃袋、意外と名医。`
+    ]);
+  }
+
+  return pick([
+    "あ〜〜おいしいものの話、最高じゃん！それだけで場があったまるよ〜。",
+    "いいねぇ〜。お腹と心が満たされる時間、かなり大事だよ。",
+    "わかる〜。おいしいって、一瞬で今日を救ってくるから強い。"
+  ]);
+}
+
+function casualWeatherReply(text) {
+  const weather = findFirstKeyword(text, ["雨", "晴れ", "暑い", "寒い", "天気"]);
+
+  if (weather) {
+    return pick([
+      `${weather}の日って、気分まで引っぱられるよね〜。空、影響力でかすぎ。`,
+      `そやな、${weather}ってだけで今日のテンション変わるのあるあるだよ〜。`,
+      `${weather}をちゃんと感じてる時点で、今日の解像度ちょっと高い。いいね。`
+    ]);
+  }
+
+  return "天気の話いいね〜。外の空気ひとつで、心の向きがふっと変わる日あるよね。";
 }
 
 function isShortBackchannel(text) {
@@ -652,6 +791,10 @@ function styleDetail(options) {
 
 function hasAny(text, words) {
   return words.some((word) => text.includes(word));
+}
+
+function findFirstKeyword(text, words) {
+  return words.find((word) => text.includes(word)) || "";
 }
 
 function readMessageContext(text, rawText = text) {
@@ -950,7 +1093,7 @@ function warmClosings(targetCharacter) {
   return [
     "無理に答えなくてもいいからね。",
     "話せる範囲で、ここに置いていってね。",
-    "急がなくていいよ、わしはここで聞いてるからね。",
+    "急がなくていいよ、ねいねいはここで聞いてるからね。",
     `${name}のペースで大丈夫だよ。`
   ];
 }
@@ -1002,7 +1145,7 @@ function extraListeningPrompts(targetCharacter) {
     "その気持ち、音にするとため息っぽい？泣きたい感じ？",
     `${name}のペースで大丈夫だよ。今は相づち多め？それとも一緒にほどく感じ？`,
     "その気持ち、手のひらに乗せたら重そう？軽そう？",
-    "わしが隣にいるとして、今かけてほしい言葉はどんな温度がいい？"
+    "ねいねいが隣にいるとして、今かけてほしい言葉はどんな温度がいい？"
   ];
 }
 
@@ -1086,6 +1229,20 @@ function pick(items) {
   return items[Math.floor(Math.random() * items.length)];
 }
 
+function openingNeineiNote() {
+  if (Math.random() < 0.45) {
+    return "";
+  }
+
+  return ` ${pick([
+    "ねいねいは今日食べたお菓子が美味しくて最高だった〜。",
+    "ねいねいはさっき、あったかい飲み物でちょっと復活したよ〜。",
+    "ねいねいは今日、空気がおいしい気がして勝手に得した気分だった〜。",
+    "ねいねいは今、ふわっと休憩モードだよ〜。",
+    "ねいねいは今日もゆるっとここにいるよ〜。"
+  ])}`;
+}
+
 form.addEventListener("submit", (event) => {
   event.preventDefault();
   sendMessage(input.value);
@@ -1114,7 +1271,4 @@ for (const button of quickButtons) {
 }
 
 syncForm();
-addMessage(
-  "bot",
-  `${callName(character)}、こんにちは〜。今日もここに来てくれてえらいね。どうしたの？`
-);
+addMessage("bot", `なんかあった〜？${openingNeineiNote()}`);
