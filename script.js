@@ -309,6 +309,7 @@ const avatar = document.querySelector("#avatar");
 let character = loadCharacter();
 let conversationMemory = [];
 let recentQuestions = [];
+let lastWeatherLocation = null;
 
 function loadCharacter() {
   const saved = window.localStorage.getItem("character-chatbot-settings");
@@ -382,7 +383,7 @@ function updateCharacterFromForm() {
   syncForm();
 }
 
-function createReply(text) {
+async function createReply(text) {
   const normalized = text.trim().toLowerCase();
 
   if (!normalized) {
@@ -391,6 +392,10 @@ function createReply(text) {
 
   if (isSingleCharacterMessage(text)) {
     return `それは「${text.trim()}」やね〜`;
+  }
+
+  if (isWeatherMessage(normalized)) {
+    return createWeatherReply(text);
   }
 
   const tone = toneProfiles[character.tone] || toneProfiles.warm;
@@ -417,6 +422,194 @@ function createFallbackReply(text, tone) {
     softLanding: understanding.softLanding !== false,
     flavor: understanding.flavor !== false
   });
+}
+
+const weatherLocations = [
+  { name: "北海道", aliases: ["北海道", "札幌"], latitude: 43.0618, longitude: 141.3545 },
+  { name: "青森", aliases: ["青森", "青森県"], latitude: 40.8246, longitude: 140.7406 },
+  { name: "岩手", aliases: ["岩手", "岩手県", "盛岡"], latitude: 39.7036, longitude: 141.1527 },
+  { name: "宮城", aliases: ["宮城", "宮城県", "仙台"], latitude: 38.2688, longitude: 140.8721 },
+  { name: "秋田", aliases: ["秋田", "秋田県"], latitude: 39.7186, longitude: 140.1024 },
+  { name: "山形", aliases: ["山形", "山形県"], latitude: 38.2404, longitude: 140.3633 },
+  { name: "福島", aliases: ["福島", "福島県"], latitude: 37.7503, longitude: 140.4676 },
+  { name: "茨城", aliases: ["茨城", "茨城県", "水戸"], latitude: 36.3418, longitude: 140.4468 },
+  { name: "栃木", aliases: ["栃木", "栃木県", "宇都宮"], latitude: 36.5658, longitude: 139.8836 },
+  { name: "群馬", aliases: ["群馬", "群馬県", "前橋"], latitude: 36.3911, longitude: 139.0608 },
+  { name: "埼玉", aliases: ["埼玉", "埼玉県", "さいたま"], latitude: 35.8617, longitude: 139.6455 },
+  { name: "千葉", aliases: ["千葉", "千葉県"], latitude: 35.6074, longitude: 140.1065 },
+  { name: "東京", aliases: ["東京", "東京都", "都内"], latitude: 35.6762, longitude: 139.6503 },
+  { name: "神奈川", aliases: ["神奈川", "神奈川県", "横浜"], latitude: 35.4437, longitude: 139.638 },
+  { name: "新潟", aliases: ["新潟", "新潟県"], latitude: 37.9161, longitude: 139.0364 },
+  { name: "富山", aliases: ["富山", "富山県"], latitude: 36.6953, longitude: 137.2113 },
+  { name: "石川", aliases: ["石川", "石川県", "金沢"], latitude: 36.5613, longitude: 136.6562 },
+  { name: "福井", aliases: ["福井", "福井県"], latitude: 36.0641, longitude: 136.2195 },
+  { name: "山梨", aliases: ["山梨", "山梨県", "甲府"], latitude: 35.6621, longitude: 138.5684 },
+  { name: "長野", aliases: ["長野", "長野県"], latitude: 36.6513, longitude: 138.181 },
+  { name: "岐阜", aliases: ["岐阜", "岐阜県"], latitude: 35.4233, longitude: 136.7606 },
+  { name: "静岡", aliases: ["静岡", "静岡県"], latitude: 34.9756, longitude: 138.3828 },
+  { name: "愛知", aliases: ["愛知", "愛知県", "名古屋"], latitude: 35.1815, longitude: 136.9066 },
+  { name: "三重", aliases: ["三重", "三重県", "津"], latitude: 34.7303, longitude: 136.5086 },
+  { name: "滋賀", aliases: ["滋賀", "滋賀県", "大津"], latitude: 35.0045, longitude: 135.8686 },
+  { name: "京都", aliases: ["京都", "京都府"], latitude: 35.0116, longitude: 135.7681 },
+  { name: "大阪", aliases: ["大阪", "大阪府"], latitude: 34.6937, longitude: 135.5023 },
+  { name: "兵庫", aliases: ["兵庫", "兵庫県", "神戸"], latitude: 34.6901, longitude: 135.1955 },
+  { name: "奈良", aliases: ["奈良", "奈良県"], latitude: 34.6851, longitude: 135.8048 },
+  { name: "和歌山", aliases: ["和歌山", "和歌山県"], latitude: 34.2305, longitude: 135.1708 },
+  { name: "鳥取", aliases: ["鳥取", "鳥取県"], latitude: 35.5011, longitude: 134.2351 },
+  { name: "島根", aliases: ["島根", "島根県", "松江"], latitude: 35.4723, longitude: 133.0505 },
+  { name: "岡山", aliases: ["岡山", "岡山県"], latitude: 34.6551, longitude: 133.9195 },
+  { name: "広島", aliases: ["広島", "広島県"], latitude: 34.3853, longitude: 132.4553 },
+  { name: "山口", aliases: ["山口", "山口県"], latitude: 34.1785, longitude: 131.4737 },
+  { name: "徳島", aliases: ["徳島", "徳島県"], latitude: 34.0703, longitude: 134.5548 },
+  { name: "香川", aliases: ["香川", "香川県", "高松"], latitude: 34.3428, longitude: 134.0466 },
+  { name: "愛媛", aliases: ["愛媛", "愛媛県", "松山"], latitude: 33.8392, longitude: 132.7657 },
+  { name: "高知", aliases: ["高知", "高知県"], latitude: 33.5597, longitude: 133.5311 },
+  { name: "福岡", aliases: ["福岡", "福岡県"], latitude: 33.5904, longitude: 130.4017 },
+  { name: "佐賀", aliases: ["佐賀", "佐賀県"], latitude: 33.2635, longitude: 130.3009 },
+  { name: "長崎", aliases: ["長崎", "長崎県"], latitude: 32.7503, longitude: 129.8777 },
+  { name: "熊本", aliases: ["熊本", "熊本県"], latitude: 32.8031, longitude: 130.7079 },
+  { name: "大分", aliases: ["大分", "大分県"], latitude: 33.2382, longitude: 131.6126 },
+  { name: "宮崎", aliases: ["宮崎", "宮崎県"], latitude: 31.9077, longitude: 131.4202 },
+  { name: "鹿児島", aliases: ["鹿児島", "鹿児島県"], latitude: 31.5966, longitude: 130.5571 },
+  { name: "沖縄", aliases: ["沖縄", "沖縄県", "那覇"], latitude: 26.2124, longitude: 127.6792 }
+];
+
+function isWeatherMessage(text) {
+  return hasAny(text, ["天気", "雨", "晴れ", "曇", "くもり", "暑", "寒", "気温", "湿度", "台風"]);
+}
+
+async function createWeatherReply(text) {
+  const location = findWeatherLocation(text) || lastWeatherLocation;
+
+  if (!location) {
+    return pick([
+      "暑い寒いとか雨晴れの話、ちゃんと空の話として聞きたいね〜。どこの天気を見ればいい？東京とか大阪みたいに教えて〜。",
+      "そやな、天気って今日の気分に直撃するよね〜。場所がわかればこの後の空模様見てくるよ。",
+      "ふむ、天気の話だね。ねいねい、ちゃんと予報見たいから住んでる地域か近い都市を教えて〜。"
+    ]);
+  }
+
+  lastWeatherLocation = location;
+
+  try {
+    const weather = await fetchWeather(location);
+    return formatWeatherReply(text, location, weather);
+  } catch {
+    return `${location.name}の天気、今ちょっと取りに行けなかった〜。でも天気の話として聞いてるよ、暑い寒いって体に直で来るから侮れん。`;
+  }
+}
+
+function findWeatherLocation(text) {
+  return weatherLocations.find((location) =>
+    location.aliases.some((alias) => text.includes(alias))
+  );
+}
+
+async function fetchWeather(location) {
+  const params = new URLSearchParams({
+    latitude: String(location.latitude),
+    longitude: String(location.longitude),
+    timezone: "Asia/Tokyo",
+    forecast_days: "2",
+    current: "temperature_2m,apparent_temperature,weather_code,wind_speed_10m",
+    hourly: "temperature_2m,precipitation_probability,precipitation,weather_code"
+  });
+  const response = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`);
+
+  if (!response.ok) {
+    throw new Error("weather request failed");
+  }
+
+  return response.json();
+}
+
+function formatWeatherReply(text, location, weather) {
+  const current = weather.current || {};
+  const currentTemp = roundWeatherNumber(current.temperature_2m);
+  const apparent = roundWeatherNumber(current.apparent_temperature);
+  const description = weatherCodeLabel(current.weather_code);
+  const rain = findNextRain(weather.hourly);
+  const tempLine = apparent && apparent !== currentTemp ? `${currentTemp}度、体感${apparent}度` : `${currentTemp}度`;
+  const rainLine = rain
+    ? `${rain.label}に雨っぽいよ。降水確率${rain.probability}%くらい。`
+    : "このあと強い雨マークは少なめっぽい。";
+  const reaction = weatherReaction(text, current.temperature_2m, current.weather_code);
+
+  return shapeReplyLength(
+    `${location.name}はいま${tempLine}で${description}。${rainLine} ${reaction}`,
+    character
+  );
+}
+
+function findNextRain(hourly = {}) {
+  const times = hourly.time || [];
+  const probabilities = hourly.precipitation_probability || [];
+  const precipitations = hourly.precipitation || [];
+  const now = new Date();
+
+  for (let index = 0; index < times.length; index += 1) {
+    const time = new Date(times[index]);
+    if (time < now) {
+      continue;
+    }
+
+    const probability = probabilities[index] ?? 0;
+    const precipitation = precipitations[index] ?? 0;
+    if (probability >= 45 || precipitation >= 0.1) {
+      return {
+        label: formatWeatherTime(time),
+        probability
+      };
+    }
+  }
+
+  return null;
+}
+
+function formatWeatherTime(time) {
+  const today = new Date();
+  const isToday = time.toDateString() === today.toDateString();
+  const hour = `${time.getHours()}時ごろ`;
+  return isToday ? `今日${hour}` : `明日${hour}`;
+}
+
+function weatherReaction(text, temperature, code) {
+  if (text.includes("暑") || temperature >= 30) {
+    return "暑さ、完全に体力泥棒だね〜。水分だけは味方につけよ。";
+  }
+
+  if (text.includes("寒") || temperature <= 8) {
+    return "寒い日は体がぎゅっとなるよね〜。あったか装備で勝とう。";
+  }
+
+  if (text.includes("雨") || isRainCode(code)) {
+    return "雨の日は足元と気分が持っていかれがち。空、仕事しすぎ〜。";
+  }
+
+  if (text.includes("晴") || code === 0 || code === 1) {
+    return "晴れの日は光だけで少し得した気分になるね〜。";
+  }
+
+  return "天気って地味に一日の機嫌を握ってくるよね〜。";
+}
+
+function weatherCodeLabel(code) {
+  if ([0].includes(code)) return "快晴";
+  if ([1, 2].includes(code)) return "晴れ寄り";
+  if ([3].includes(code)) return "くもり";
+  if ([45, 48].includes(code)) return "霧っぽい空";
+  if (isRainCode(code)) return "雨";
+  if ([71, 73, 75, 77, 85, 86].includes(code)) return "雪";
+  if ([95, 96, 99].includes(code)) return "雷雨";
+  return "変わりやすい空";
+}
+
+function isRainCode(code) {
+  return [51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82].includes(code);
+}
+
+function roundWeatherNumber(value) {
+  return Number.isFinite(value) ? Math.round(value) : "--";
 }
 
 function understandMessage(text) {
@@ -1212,9 +1405,9 @@ function sendMessage(text) {
   input.value = "";
 
   const typing = addTyping();
-  window.setTimeout(() => {
+  window.setTimeout(async () => {
     typing.remove();
-    const reply = createReply(trimmed);
+    const reply = await createReply(trimmed);
     addMessage("bot", reply);
     rememberConversation(trimmed, reply);
   }, 420);
