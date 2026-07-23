@@ -386,17 +386,26 @@ function updateCharacterFromForm() {
 
 async function createReply(text) {
   const normalized = normalizeForMatch(text);
+  const continuedReply = createContextualContinuation(text);
 
   if (!normalized) {
     return "メッセージを入力してください。";
+  }
+
+  if (shouldContinueWeatherConversation(text)) {
+    return createWeatherReply(text);
   }
 
   if (isSingleCharacterMessage(text)) {
     return `それは「${text.trim()}」やね〜`;
   }
 
-  if (isWeatherMessage(normalized) || shouldContinueWeatherConversation(text)) {
+  if (isWeatherMessage(normalized)) {
     return createWeatherReply(text);
+  }
+
+  if (continuedReply) {
+    return continuedReply;
   }
 
   const tone = toneProfiles[character.tone] || toneProfiles.warm;
@@ -426,53 +435,53 @@ function createFallbackReply(text, tone) {
 }
 
 const weatherLocations = [
-  { name: "北海道", aliases: ["北海道", "札幌"], latitude: 43.0618, longitude: 141.3545 },
-  { name: "青森", aliases: ["青森", "青森県"], latitude: 40.8246, longitude: 140.7406 },
-  { name: "岩手", aliases: ["岩手", "岩手県", "盛岡"], latitude: 39.7036, longitude: 141.1527 },
-  { name: "宮城", aliases: ["宮城", "宮城県", "仙台"], latitude: 38.2688, longitude: 140.8721 },
-  { name: "秋田", aliases: ["秋田", "秋田県"], latitude: 39.7186, longitude: 140.1024 },
-  { name: "山形", aliases: ["山形", "山形県"], latitude: 38.2404, longitude: 140.3633 },
-  { name: "福島", aliases: ["福島", "福島県"], latitude: 37.7503, longitude: 140.4676 },
-  { name: "茨城", aliases: ["茨城", "茨城県", "水戸"], latitude: 36.3418, longitude: 140.4468 },
-  { name: "栃木", aliases: ["栃木", "栃木県", "宇都宮"], latitude: 36.5658, longitude: 139.8836 },
-  { name: "群馬", aliases: ["群馬", "群馬県", "前橋"], latitude: 36.3911, longitude: 139.0608 },
+  { name: "北海道", aliases: ["北海道", "ほっかいどう", "札幌", "さっぽろ"], latitude: 43.0618, longitude: 141.3545 },
+  { name: "青森", aliases: ["青森", "青森県", "あおもり"], latitude: 40.8246, longitude: 140.7406 },
+  { name: "岩手", aliases: ["岩手", "岩手県", "いわて", "盛岡", "もりおか"], latitude: 39.7036, longitude: 141.1527 },
+  { name: "宮城", aliases: ["宮城", "宮城県", "みやぎ", "仙台", "せんだい"], latitude: 38.2688, longitude: 140.8721 },
+  { name: "秋田", aliases: ["秋田", "秋田県", "あきた"], latitude: 39.7186, longitude: 140.1024 },
+  { name: "山形", aliases: ["山形", "山形県", "やまがた"], latitude: 38.2404, longitude: 140.3633 },
+  { name: "福島", aliases: ["福島", "福島県", "ふくしま"], latitude: 37.7503, longitude: 140.4676 },
+  { name: "茨城", aliases: ["茨城", "茨城県", "いばらき", "水戸", "みと"], latitude: 36.3418, longitude: 140.4468 },
+  { name: "栃木", aliases: ["栃木", "栃木県", "とちぎ", "宇都宮", "うつのみや"], latitude: 36.5658, longitude: 139.8836 },
+  { name: "群馬", aliases: ["群馬", "群馬県", "ぐんま", "前橋", "まえばし"], latitude: 36.3911, longitude: 139.0608 },
   { name: "埼玉", aliases: ["埼玉", "埼玉県", "さいたま"], latitude: 35.8617, longitude: 139.6455 },
-  { name: "千葉", aliases: ["千葉", "千葉県"], latitude: 35.6074, longitude: 140.1065 },
-  { name: "東京", aliases: ["東京", "東京都", "都内"], latitude: 35.6762, longitude: 139.6503 },
-  { name: "神奈川", aliases: ["神奈川", "神奈川県", "横浜"], latitude: 35.4437, longitude: 139.638 },
-  { name: "新潟", aliases: ["新潟", "新潟県"], latitude: 37.9161, longitude: 139.0364 },
-  { name: "富山", aliases: ["富山", "富山県"], latitude: 36.6953, longitude: 137.2113 },
-  { name: "石川", aliases: ["石川", "石川県", "金沢"], latitude: 36.5613, longitude: 136.6562 },
-  { name: "福井", aliases: ["福井", "福井県"], latitude: 36.0641, longitude: 136.2195 },
-  { name: "山梨", aliases: ["山梨", "山梨県", "甲府"], latitude: 35.6621, longitude: 138.5684 },
-  { name: "長野", aliases: ["長野", "長野県"], latitude: 36.6513, longitude: 138.181 },
-  { name: "岐阜", aliases: ["岐阜", "岐阜県"], latitude: 35.4233, longitude: 136.7606 },
-  { name: "静岡", aliases: ["静岡", "静岡県"], latitude: 34.9756, longitude: 138.3828 },
-  { name: "愛知", aliases: ["愛知", "愛知県", "名古屋"], latitude: 35.1815, longitude: 136.9066 },
-  { name: "三重", aliases: ["三重", "三重県", "津"], latitude: 34.7303, longitude: 136.5086 },
-  { name: "滋賀", aliases: ["滋賀", "滋賀県", "大津"], latitude: 35.0045, longitude: 135.8686 },
-  { name: "京都", aliases: ["京都", "京都府"], latitude: 35.0116, longitude: 135.7681 },
-  { name: "大阪", aliases: ["大阪", "大阪府"], latitude: 34.6937, longitude: 135.5023 },
-  { name: "兵庫", aliases: ["兵庫", "兵庫県", "神戸"], latitude: 34.6901, longitude: 135.1955 },
-  { name: "奈良", aliases: ["奈良", "奈良県"], latitude: 34.6851, longitude: 135.8048 },
-  { name: "和歌山", aliases: ["和歌山", "和歌山県"], latitude: 34.2305, longitude: 135.1708 },
-  { name: "鳥取", aliases: ["鳥取", "鳥取県"], latitude: 35.5011, longitude: 134.2351 },
-  { name: "島根", aliases: ["島根", "島根県", "松江"], latitude: 35.4723, longitude: 133.0505 },
-  { name: "岡山", aliases: ["岡山", "岡山県"], latitude: 34.6551, longitude: 133.9195 },
-  { name: "広島", aliases: ["広島", "広島県"], latitude: 34.3853, longitude: 132.4553 },
-  { name: "山口", aliases: ["山口", "山口県"], latitude: 34.1785, longitude: 131.4737 },
-  { name: "徳島", aliases: ["徳島", "徳島県"], latitude: 34.0703, longitude: 134.5548 },
-  { name: "香川", aliases: ["香川", "香川県", "高松"], latitude: 34.3428, longitude: 134.0466 },
-  { name: "愛媛", aliases: ["愛媛", "愛媛県", "松山"], latitude: 33.8392, longitude: 132.7657 },
-  { name: "高知", aliases: ["高知", "高知県"], latitude: 33.5597, longitude: 133.5311 },
-  { name: "福岡", aliases: ["福岡", "福岡県"], latitude: 33.5904, longitude: 130.4017 },
-  { name: "佐賀", aliases: ["佐賀", "佐賀県"], latitude: 33.2635, longitude: 130.3009 },
-  { name: "長崎", aliases: ["長崎", "長崎県"], latitude: 32.7503, longitude: 129.8777 },
-  { name: "熊本", aliases: ["熊本", "熊本県"], latitude: 32.8031, longitude: 130.7079 },
-  { name: "大分", aliases: ["大分", "大分県"], latitude: 33.2382, longitude: 131.6126 },
-  { name: "宮崎", aliases: ["宮崎", "宮崎県"], latitude: 31.9077, longitude: 131.4202 },
-  { name: "鹿児島", aliases: ["鹿児島", "鹿児島県"], latitude: 31.5966, longitude: 130.5571 },
-  { name: "沖縄", aliases: ["沖縄", "沖縄県", "那覇"], latitude: 26.2124, longitude: 127.6792 }
+  { name: "千葉", aliases: ["千葉", "千葉県", "ちば"], latitude: 35.6074, longitude: 140.1065 },
+  { name: "東京", aliases: ["東京", "東京都", "都内", "とうきょう"], latitude: 35.6762, longitude: 139.6503 },
+  { name: "神奈川", aliases: ["神奈川", "神奈川県", "かながわ", "横浜", "よこはま"], latitude: 35.4437, longitude: 139.638 },
+  { name: "新潟", aliases: ["新潟", "新潟県", "にいがた"], latitude: 37.9161, longitude: 139.0364 },
+  { name: "富山", aliases: ["富山", "富山県", "とやま"], latitude: 36.6953, longitude: 137.2113 },
+  { name: "石川", aliases: ["石川", "石川県", "いしかわ", "金沢", "かなざわ"], latitude: 36.5613, longitude: 136.6562 },
+  { name: "福井", aliases: ["福井", "福井県", "ふくい"], latitude: 36.0641, longitude: 136.2195 },
+  { name: "山梨", aliases: ["山梨", "山梨県", "やまなし", "甲府", "こうふ"], latitude: 35.6621, longitude: 138.5684 },
+  { name: "長野", aliases: ["長野", "長野県", "ながの"], latitude: 36.6513, longitude: 138.181 },
+  { name: "岐阜", aliases: ["岐阜", "岐阜県", "ぎふ"], latitude: 35.4233, longitude: 136.7606 },
+  { name: "静岡", aliases: ["静岡", "静岡県", "しずおか"], latitude: 34.9756, longitude: 138.3828 },
+  { name: "愛知", aliases: ["愛知", "愛知県", "あいち", "名古屋", "なごや"], latitude: 35.1815, longitude: 136.9066 },
+  { name: "三重", aliases: ["三重", "三重県", "みえ", "津"], latitude: 34.7303, longitude: 136.5086 },
+  { name: "滋賀", aliases: ["滋賀", "滋賀県", "しが", "大津", "おおつ"], latitude: 35.0045, longitude: 135.8686 },
+  { name: "京都", aliases: ["京都", "京都府", "きょうと"], latitude: 35.0116, longitude: 135.7681 },
+  { name: "大阪", aliases: ["大阪", "大阪府", "おおさか"], latitude: 34.6937, longitude: 135.5023 },
+  { name: "兵庫", aliases: ["兵庫", "兵庫県", "ひょうご", "神戸", "こうべ"], latitude: 34.6901, longitude: 135.1955 },
+  { name: "奈良", aliases: ["奈良", "奈良県", "なら"], latitude: 34.6851, longitude: 135.8048 },
+  { name: "和歌山", aliases: ["和歌山", "和歌山県", "わかやま"], latitude: 34.2305, longitude: 135.1708 },
+  { name: "鳥取", aliases: ["鳥取", "鳥取県", "とっとり"], latitude: 35.5011, longitude: 134.2351 },
+  { name: "島根", aliases: ["島根", "島根県", "しまね", "松江", "まつえ"], latitude: 35.4723, longitude: 133.0505 },
+  { name: "岡山", aliases: ["岡山", "岡山県", "おかやま"], latitude: 34.6551, longitude: 133.9195 },
+  { name: "広島", aliases: ["広島", "広島県", "ひろしま"], latitude: 34.3853, longitude: 132.4553 },
+  { name: "山口", aliases: ["山口", "山口県", "やまぐち"], latitude: 34.1785, longitude: 131.4737 },
+  { name: "徳島", aliases: ["徳島", "徳島県", "とくしま"], latitude: 34.0703, longitude: 134.5548 },
+  { name: "香川", aliases: ["香川", "香川県", "かがわ", "高松", "たかまつ"], latitude: 34.3428, longitude: 134.0466 },
+  { name: "愛媛", aliases: ["愛媛", "愛媛県", "えひめ", "松山", "まつやま"], latitude: 33.8392, longitude: 132.7657 },
+  { name: "高知", aliases: ["高知", "高知県", "こうち"], latitude: 33.5597, longitude: 133.5311 },
+  { name: "福岡", aliases: ["福岡", "福岡県", "ふくおか"], latitude: 33.5904, longitude: 130.4017 },
+  { name: "佐賀", aliases: ["佐賀", "佐賀県", "さが"], latitude: 33.2635, longitude: 130.3009 },
+  { name: "長崎", aliases: ["長崎", "長崎県", "ながさき"], latitude: 32.7503, longitude: 129.8777 },
+  { name: "熊本", aliases: ["熊本", "熊本県", "くまもと"], latitude: 32.8031, longitude: 130.7079 },
+  { name: "大分", aliases: ["大分", "大分県", "おおいた"], latitude: 33.2382, longitude: 131.6126 },
+  { name: "宮崎", aliases: ["宮崎", "宮崎県", "みやざき"], latitude: 31.9077, longitude: 131.4202 },
+  { name: "鹿児島", aliases: ["鹿児島", "鹿児島県", "かごしま"], latitude: 31.5966, longitude: 130.5571 },
+  { name: "沖縄", aliases: ["沖縄", "沖縄県", "おきなわ", "那覇", "なは"], latitude: 26.2124, longitude: 127.6792 }
 ];
 
 function isWeatherMessage(text) {
@@ -657,6 +666,133 @@ function isRainCode(code) {
 
 function roundWeatherNumber(value) {
   return Number.isFinite(value) ? Math.round(value) : "--";
+}
+
+function createContextualContinuation(text) {
+  const recent = conversationMemory.at(-1);
+
+  if (!recent || !looksLikeAnswerToPreviousQuestion(text, recent.botReply)) {
+    return "";
+  }
+
+  const normalizedPrevious = normalizeForMatch(recent.userText);
+  const previousContext = readMessageContext(normalizedPrevious, recent.userText);
+  const normalizedAnswer = normalizeForMatch(text);
+  const name = callName(character);
+
+  if (previousContext.topic === "恋愛のこと") {
+    return buildReply({
+      character,
+      tone: toneProfiles[character.tone] || toneProfiles.warm,
+      core: pick([
+        `そっか、その答えが出てくる感じなんだね〜。恋愛ってほんと心の天気が忙しいよ。`,
+        `なるほどな〜。その一言だけでも、相手のことを大事に見てるの伝わるよ。`,
+        `たしかに、そこが引っかかるとずっと頭の片隅に居座るよね。家賃払ってほしい。`
+      ]),
+      detail: `${name}の価値は相手の反応で減らないからね。ねいねいはそこ、何回でも言うよ〜。`,
+      flavor: false
+    });
+  }
+
+  if (previousContext.topic === "仕事のこと") {
+    return buildReply({
+      character,
+      tone: toneProfiles[character.tone] || toneProfiles.warm,
+      core: pick([
+        `そやな、その場面が残ってるんだね〜。仕事の空気って、あとからも地味にまとわりつくよね。`,
+        `なるほどな〜。そこまで言葉にできた時点で、もう少し外に出せてる感じあるよ。`,
+        `ふむ、そこか〜。仕事のもやもや、退勤後も勝手についてくるのほんと困る。`
+      ]),
+      detail: `でも${name}は今日そこを生き抜いた。まずそれが強いよ〜。`,
+      flavor: false
+    });
+  }
+
+  if (previousContext.topic === "人とのこと") {
+    return buildReply({
+      character,
+      tone: toneProfiles[character.tone] || toneProfiles.warm,
+      core: pick([
+        `なるほどな〜。人との距離って、近すぎても遠すぎてもむずかしいよね。`,
+        `そやな、その感じが残るのわかるよ。相手の言葉とか空気って、意外と長持ちする。`,
+        `ふむ、そこを教えてくれたんだね。ちゃんと続きとして聞いてるよ〜。`
+      ]),
+      detail: `${name}が悪いって話に急いで持っていかなくていいからね。まず味方側に置いとこ。`,
+      flavor: false
+    });
+  }
+
+  if (isShortAnswer(normalizedAnswer)) {
+    return buildReply({
+      character,
+      tone: toneProfiles[character.tone] || toneProfiles.warm,
+      core: pick([
+        `そっか、${text.trim()}寄りなんだね〜。そこから続けて聞くよ。`,
+        `なるほどな〜、${text.trim()}って答えになる感じか。短いけど温度あるね。`,
+        `たしかに、その一言でだいぶ方向見えるよ〜。`
+      ]),
+      detail: contextualDetailFor(previousContext, name),
+      flavor: false
+    });
+  }
+
+  return buildReply({
+    character,
+    tone: toneProfiles[character.tone] || toneProfiles.warm,
+    core: pick([
+      `うんうん、さっきの続きとして聞いてるよ〜。`,
+      `なるほどな〜。ちゃんと話が一段進んだ感じあるね。`,
+      `そやな、その答えが出てくるの自然だと思うよ。`
+    ]),
+    detail: contextualDetailFor(previousContext, name),
+    flavor: false
+  });
+}
+
+function looksLikeAnswerToPreviousQuestion(text, previousBotReply) {
+  if (!endsWithQuestion(previousBotReply)) {
+    return false;
+  }
+
+  const normalized = normalizeForMatch(text);
+  if (findWeatherLocation(text)) {
+    return true;
+  }
+
+  return isShortAnswer(normalized) || hasAny(normalized, [
+    "どっち",
+    "前者",
+    "後者",
+    "安心",
+    "整理",
+    "共感",
+    "疲れ",
+    "不安",
+    "さみしさ",
+    "楽",
+    "つら",
+    "仕事",
+    "恋愛",
+    "友達"
+  ]);
+}
+
+function isShortAnswer(normalizedText) {
+  return normalizedText.length > 0 && normalizedText.length <= 18;
+}
+
+function contextualDetailFor(previousContext, name) {
+  const details = {
+    "仕事のこと": `${name}、仕事の話は正解探しより先に、まず疲れた自分を回収しよ〜。`,
+    "恋愛のこと": `${name}はそのままで十分すてきだよ。気づかない相手、だいぶ損してる。`,
+    "人とのこと": "人間関係、細かい温度差がいちばん体力使うよね。ねいねいは味方側にいるよ〜。",
+    "体のこと": "体の声って小さく見えて、けっこう本音言ってくるからね。今日は甘やかしてよし。",
+    "作りたいもののこと": "作りたい気持ち、まだ形がなくてもちゃんと種だよ。急がなくていい。",
+    "予定のこと": "予定って頭の中で増殖するよね〜。まず一個ずつで大丈夫。",
+    "自分のこと": `${name}、自分に厳しい日でも、ここまで来てる時点でちゃんとえらいよ。`
+  };
+
+  return details[previousContext.topic] || "話がきれいにまとまってなくても大丈夫。ねいねい、続きとして受け取ってるよ〜。";
 }
 
 function understandMessage(text) {
