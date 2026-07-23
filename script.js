@@ -385,7 +385,7 @@ function updateCharacterFromForm() {
 }
 
 async function createReply(text) {
-  const normalized = text.trim().toLowerCase();
+  const normalized = normalizeForMatch(text);
 
   if (!normalized) {
     return "メッセージを入力してください。";
@@ -402,7 +402,7 @@ async function createReply(text) {
   const tone = toneProfiles[character.tone] || toneProfiles.warm;
   const toneLabel = tone.label;
   const match = intentReplies.find((item) =>
-    item.patterns.some((pattern) => normalized.includes(pattern.toLowerCase()))
+    item.patterns.some((pattern) => normalized.includes(normalizeForMatch(pattern)))
   );
 
   if (match) {
@@ -476,7 +476,8 @@ const weatherLocations = [
 ];
 
 function isWeatherMessage(text) {
-  return hasAny(text, [
+  const normalized = normalizeForMatch(text);
+  return hasAny(normalized, [
     "天気",
     "雨",
     "あめ",
@@ -486,8 +487,10 @@ function isWeatherMessage(text) {
     "くもり",
     "暑",
     "あつ",
+    "あち",
     "寒",
     "さむ",
+    "さみ",
     "気温",
     "湿度",
     "台風"
@@ -511,7 +514,9 @@ async function createWeatherReply(text) {
   }
 
   lastWeatherLocation = location;
-  const weatherContext = pendingWeatherText ? `${pendingWeatherText} ${text}` : text;
+  const weatherContext = pendingWeatherText && !isWeatherMessage(text)
+    ? `${pendingWeatherText} ${text}`
+    : text;
   pendingWeatherText = "";
 
   try {
@@ -523,8 +528,9 @@ async function createWeatherReply(text) {
 }
 
 function findWeatherLocation(text) {
+  const normalized = normalizeForMatch(text);
   return weatherLocations.find((location) =>
-    location.aliases.some((alias) => text.includes(alias))
+    location.aliases.some((alias) => normalized.includes(normalizeForMatch(alias)))
   );
 }
 
@@ -597,19 +603,21 @@ function formatWeatherTime(time) {
 }
 
 function weatherReaction(text, temperature, code) {
-  if (text.includes("暑") || text.includes("あつ")) {
+  const normalized = normalizeForMatch(text);
+
+  if (normalized.includes("暑") || normalized.includes("あつ") || normalized.includes("あち")) {
     return "暑さ、完全に体力泥棒だね〜。水分だけは味方につけよ。";
   }
 
-  if (text.includes("寒") || text.includes("さむ")) {
+  if (normalized.includes("寒") || normalized.includes("さむ") || normalized.includes("さみ")) {
     return "寒い日は体がぎゅっとなるよね〜。あったか装備で勝とう。";
   }
 
-  if (text.includes("雨") || text.includes("あめ")) {
+  if (normalized.includes("雨") || normalized.includes("あめ")) {
     return "雨の日は足元と気分が持っていかれがち。空、仕事しすぎ〜。";
   }
 
-  if (text.includes("晴") || text.includes("はれ")) {
+  if (normalized.includes("晴") || normalized.includes("はれ")) {
     return "晴れの日は光だけで少し得した気分になるね〜。";
   }
 
@@ -652,7 +660,7 @@ function roundWeatherNumber(value) {
 }
 
 function understandMessage(text) {
-  const normalized = text.toLowerCase();
+  const normalized = normalizeForMatch(text);
   const name = callName(character);
   const recent = conversationMemory.at(-1);
   const context = readMessageContext(normalized, text);
@@ -1026,7 +1034,35 @@ function hasAny(text, words) {
 }
 
 function findFirstKeyword(text, words) {
-  return words.find((word) => text.includes(word)) || "";
+  const normalized = normalizeForMatch(text);
+  return words.find((word) => normalized.includes(normalizeForMatch(word))) || "";
+}
+
+function normalizeForMatch(text) {
+  return String(text || "")
+    .toLowerCase()
+    .normalize("NFKC")
+    .replace(/[ぁァ]/g, "あ")
+    .replace(/[ぃィ]/g, "い")
+    .replace(/[ぅゥ]/g, "う")
+    .replace(/[ぇェ]/g, "え")
+    .replace(/[ぉォ]/g, "お")
+    .replace(/[ゃャ]/g, "や")
+    .replace(/[ゅュ]/g, "ゆ")
+    .replace(/[ょョ]/g, "よ")
+    .replace(/[っッ]/g, "")
+    .replace(/[ー〜～‐‑‒–—―\-ｰ]+/g, "")
+    .replace(/[!！?？。,.、…・「」『』（）()[\]{}【】\s]/g, "")
+    .replace(/暑い/g, "暑")
+    .replace(/寒い/g, "寒")
+    .replace(/晴れて/g, "晴れ")
+    .replace(/晴れる/g, "晴れ")
+    .replace(/降って/g, "雨")
+    .replace(/降りそう/g, "雨")
+    .replace(/あちい/g, "あつい")
+    .replace(/あち/g, "あつ")
+    .replace(/さみい/g, "さむい")
+    .replace(/さみ/g, "さむ");
 }
 
 function readMessageContext(text, rawText = text) {
