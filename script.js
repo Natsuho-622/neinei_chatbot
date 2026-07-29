@@ -301,12 +301,16 @@ const conversationStyleInput = document.querySelector("#conversation-style");
 const useEmojiInput = document.querySelector("#use-emoji");
 const catchphraseInput = document.querySelector("#character-catchphrase");
 const sampleLinesInput = document.querySelector("#sample-lines");
+const openAiApiKeyInput = document.querySelector("#openai-api-key");
+const llmModelInput = document.querySelector("#llm-model");
+const useWebSearchInput = document.querySelector("#use-web-search");
 const resetNeineiButton = document.querySelector("#reset-neinei");
 const botName = document.querySelector("#bot-name");
 const botStatus = document.querySelector("#bot-status");
 const avatar = document.querySelector("#avatar");
 
 let character = loadCharacter();
+let llmSettings = loadLlmSettings();
 let conversationMemory = [];
 let recentQuestions = [];
 let lastWeatherLocation = null;
@@ -337,6 +341,37 @@ function saveCharacter() {
   window.localStorage.setItem("character-chatbot-settings", JSON.stringify(character));
 }
 
+function loadLlmSettings() {
+  const saved = window.localStorage.getItem("neinei-llm-settings");
+
+  if (!saved) {
+    return {
+      apiKey: "",
+      model: "gpt-5",
+      useWebSearch: true
+    };
+  }
+
+  try {
+    return {
+      apiKey: "",
+      model: "gpt-5",
+      useWebSearch: true,
+      ...JSON.parse(saved)
+    };
+  } catch {
+    return {
+      apiKey: "",
+      model: "gpt-5",
+      useWebSearch: true
+    };
+  }
+}
+
+function saveLlmSettings() {
+  window.localStorage.setItem("neinei-llm-settings", JSON.stringify(llmSettings));
+}
+
 function syncForm() {
   nameInput.value = character.name;
   recipientNameInput.value = character.recipientName;
@@ -354,6 +389,9 @@ function syncForm() {
   useEmojiInput.checked = Boolean(character.useEmoji);
   catchphraseInput.value = character.catchphrase;
   sampleLinesInput.value = character.sampleLines;
+  openAiApiKeyInput.value = llmSettings.apiKey;
+  llmModelInput.value = llmSettings.model;
+  useWebSearchInput.checked = Boolean(llmSettings.useWebSearch);
   botName.textContent = character.name;
   botStatus.textContent = renderTemplate(character.role, character);
   avatar.textContent = character.name.trim().slice(0, 1).toUpperCase() || "ね";
@@ -380,45 +418,134 @@ function updateCharacterFromForm() {
     sampleLines: sampleLinesInput.value.trim() || defaultCharacter.sampleLines
   };
 
+  llmSettings = {
+    apiKey: openAiApiKeyInput.value.trim(),
+    model: llmModelInput.value.trim() || "gpt-5",
+    useWebSearch: useWebSearchInput.checked
+  };
+
   saveCharacter();
+  saveLlmSettings();
   syncForm();
 }
 
 async function createReply(text) {
-  const normalized = normalizeForMatch(text);
-  const continuedReply = createContextualContinuation(text);
-
-  if (!normalized) {
+  if (!text.trim()) {
     return "メッセージを入力してください。";
   }
 
-  if (shouldContinueWeatherConversation(text)) {
-    return createWeatherReply(text);
+  try {
+    return await createLlmReply(text);
+  } catch (error) {
+    console.warn(error);
+    return apiErrorFallback();
+  }
+}
+
+async function createLlmReply(text) {
+  if (!llmSettings.apiKey) {
+    throw new Error("OpenAI API key is not configured");
   }
 
-  if (isSingleCharacterMessage(text)) {
-    return `それは「${text.trim()}」やね〜`;
+  const input = [
+    ...conversationMessagesForModel(),
+    {
+      role: "user",
+      content: text
+    }
+  ];
+  const body = {
+    model: llmSettings.model || "gpt-5",
+    instructions: buildNeineiInstructions(),
+    input,
+    store: false,
+    max_output_tokens: 220
+  };
+
+  if (llmSettings.useWebSearch) {
+    body.tools = [{ type: "web_search" }];
   }
 
-  if (isWeatherMessage(normalized)) {
-    return createWeatherReply(text);
+  const response = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${llmSettings.apiKey}`
+    },
+    body: JSON.stringify(body)
+  });
+
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(`OpenAI API request failed: ${response.status} ${detail}`);
   }
 
-  if (continuedReply) {
-    return continuedReply;
+  const data = await response.json();
+  const reply = extractResponseText(data);
+
+  if (!reply) {
+    throw new Error("OpenAI API returned an empty response");
   }
 
-  const tone = toneProfiles[character.tone] || toneProfiles.warm;
-  const toneLabel = tone.label;
-  const match = intentReplies.find((item) =>
-    item.patterns.some((pattern) => normalized.includes(normalizeForMatch(pattern)))
-  );
+  return shapeReplyLength(reply, character);
+}
 
-  if (match) {
-    return match.reply({ character, tone, toneLabel, text });
+function conversationMessagesForModel() {
+  return conversationMemory
+    .flatMap((item) => [
+      {
+        role: "user",
+        content: item.userText
+      },
+      {
+        role: "assistant",
+        content: item.botReply
+      }
+    ])
+    .slice(-20);
+}
+
+function buildNeineiInstructions() {
+  return [
+    `あなたはオリジナルキャラクター「${character.name}」。`,
+    `相手の名前は「${recipientName(character)}」、呼び方は「${callName(character)}」。`,
+    `一人称は基本「${firstPerson(character)}」。ただし決め台詞「${characterCatchphrase(character)}」の中の「わし」はそのまま使ってよい。`,
+    `関係性: ${renderTemplate(character.relationship, character)}`,
+    `肩書き: ${renderTemplate(character.role, character)}`,
+    `性格: ${renderTemplate(character.personality, character)}`,
+    `世界観: ${renderTemplate(character.world, character)}`,
+    `得意なこと: ${renderTemplate(character.specialties, character)}`,
+    `避けること: ${renderTemplate(character.avoidList, character)}`,
+    `サンプル台詞:\n${sampleLines(character)}`,
+    "毎回、返答を書く前に必ず「ユーザーは前の質問に答えたのか、それとも新しい話題なのか」を判断する。",
+    "前の質問への返答だった場合は、その答えを前提に会話を続け、最初から話を始め直さない。",
+    "キーワードに反応するだけの定型文や機械的な復唱は禁止。相手の言葉の意味を自然に受け取って返す。",
+    "日常雑談は悩みにすり替えず、同じ視点からノリよく返す。辛い話は存在そのものを肯定する。",
+    "天気・ニュース・現在情報などが必要なときは、利用可能なら検索ツールを使って自然に会話へ混ぜる。",
+    "質問攻めにしない。質問は必要な時だけ1つまで。",
+    "返答は日本語で、100〜150文字前後。長くなりすぎない。",
+    "返答テキストだけを書き、分析や判断過程は書かない。"
+  ].join("\n");
+}
+
+function extractResponseText(data) {
+  if (data.output_text) {
+    return data.output_text.trim();
   }
 
-  return createFallbackReply(text, tone);
+  return (data.output || [])
+    .flatMap((item) => item.content || [])
+    .map((content) => content.text || "")
+    .join("")
+    .trim();
+}
+
+function apiErrorFallback() {
+  if (!llmSettings.apiKey) {
+    return "ねいねい、まだAIにつながれてないみたい〜。右側にOpenAI APIキーを入れたら、ちゃんと会話できるよ。";
+  }
+
+  return "あれ、今ちょっとAIにつながりにくいみたい〜。少し置いてもう一回話しかけてみてね。";
 }
 
 function createFallbackReply(text, tone) {
@@ -1559,7 +1686,7 @@ function endsWithQuestion(text) {
 
 function shapeReplyLength(text, targetCharacter) {
   const clean = text.replace(/\s+/g, " ").trim();
-  const limit = 125;
+  const limit = 180;
 
   if (clean.length <= limit) {
     return clean;
@@ -1626,7 +1753,7 @@ function sendMessage(text) {
 
 function rememberConversation(userText, botReply) {
   conversationMemory.push({ userText, botReply });
-  conversationMemory = conversationMemory.slice(-6);
+  conversationMemory = conversationMemory.slice(-20);
 }
 
 function pick(items) {

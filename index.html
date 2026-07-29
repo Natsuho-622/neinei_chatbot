@@ -111,6 +111,18 @@
 大きく深呼吸して、伸びしてみよう〜
 新しく何かをしようと思わなくていいよ、続けるだけで今日は満点</textarea>
           </label>
+          <label>
+            OpenAI APIキー
+            <input id="openai-api-key" type="password" autocomplete="off" placeholder="sk-..." />
+          </label>
+          <label>
+            モデル
+            <input id="llm-model" value="gpt-5" maxlength="40" />
+          </label>
+          <label class="checkbox-row">
+            <input id="use-web-search" type="checkbox" checked />
+            最新情報の検索を使う
+          </label>
           <button id="reset-neinei" type="button">ねいねい設定に戻す</button>
           <button type="submit">設定を反映</button>
         </form>
@@ -134,6 +146,6 @@
       </aside>
     </main>
 
-    <script src="./script.js?v=20260723-context-kana"></script>
+    <script src="./script.js?v=20260729-llm-chat"></script>
   </body>
 </html>
