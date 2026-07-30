@@ -481,10 +481,33 @@ async function createLlmReply(text) {
   }
 
   const data = await response.json();
-  const reply = extractResponseText(data);
+  let reply = extractResponseText(data);
 
   if (!reply) {
     throw new Error("OpenAI API returned an empty response");
+  }
+
+  if (shouldRegenerateReply(reply)) {
+    const retryResponse = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${llmSettings.apiKey}`
+      },
+      body: JSON.stringify({
+        ...body,
+        instructions: `${body.instructions}\n\n今の返答は直近の言い回しと似ています。相手の直前の内容に合わせて、別の書き出し・別の表現で自然に返してください。禁止表現は使わないでください。`
+      })
+    });
+
+    if (retryResponse.ok) {
+      const retryData = await retryResponse.json();
+      const retryReply = extractResponseText(retryData);
+
+      if (retryReply && !shouldRegenerateReply(retryReply)) {
+        reply = retryReply;
+      }
+    }
   }
 
   return shapeReplyLength(reply, character);
@@ -507,6 +530,7 @@ function conversationMessagesForModel() {
 
 function buildNeineiInstructions() {
   return [
+    "あなたは毎ターン新しく診断するAIではなく、一つの会話を続けている「ねいねい」です。",
     `あなたはオリジナルキャラクター「${character.name}」。`,
     `相手の名前は「${recipientName(character)}」、呼び方は「${callName(character)}」。`,
     `一人称は基本「${firstPerson(character)}」。ただし決め台詞「${characterCatchphrase(character)}」の中の「わし」はそのまま使ってよい。`,
@@ -518,14 +542,32 @@ function buildNeineiInstructions() {
     `避けること: ${renderTemplate(character.avoidList, character)}`,
     `サンプル台詞:\n${sampleLines(character)}`,
     "毎回、返答を書く前に必ず「ユーザーは前の質問に答えたのか、それとも新しい話題なのか」を判断する。",
-    "前の質問への返答だった場合は、その答えを前提に会話を続け、最初から話を始め直さない。",
+    "前の質問への返答だった場合は、その答えを受けて一段だけ会話を進める。新しくカウンセリングを始めるような返答は禁止。",
     "キーワードに反応するだけの定型文や機械的な復唱は禁止。相手の言葉の意味を自然に受け取って返す。",
-    "日常雑談は悩みにすり替えず、同じ視点からノリよく返す。辛い話は存在そのものを肯定する。",
+    "日常雑談を最優先する。短い返答でも、前の質問への答えなら雑談として自然に続ける。",
+    "例: ねいねいが「今日はどんな一日だった？」と聞いて、相手が「疲れた」と答えたら「おつかれさま〜。なんかバタバタしてた？」のように続ける。",
+    "辛い話は原因探しより先に存在そのものを肯定する。ただし毎回同じ励まし文句にしない。",
     "天気・ニュース・現在情報などが必要なときは、利用可能なら検索ツールを使って自然に会話へ混ぜる。",
     "質問攻めにしない。質問は必要な時だけ1つまで。",
+    "直近のねいねいの返答と同じ書き出し、同じ相づち、同じ比喩、同じ締めを繰り返さない。",
+    "「なるほど」「ふむ、なるほどな〜」「温度あるね」「きれいに説明しなくていいよ」「雑に置いた言葉も、ちゃんと会話」などの決まり文句は禁止。",
+    `最近のねいねいの返答。これらと似た表現を避ける:\n${recentAssistantRepliesForInstruction()}`,
     "返答は日本語で、100〜150文字前後。長くなりすぎない。",
     "返答テキストだけを書き、分析や判断過程は書かない。"
   ].join("\n");
+}
+
+function recentAssistantRepliesForInstruction() {
+  const replies = conversationMemory
+    .map((item) => item.botReply)
+    .filter(Boolean)
+    .slice(-6);
+
+  if (!replies.length) {
+    return "まだなし";
+  }
+
+  return replies.map((reply, index) => `${index + 1}. ${reply}`).join("\n");
 }
 
 function extractResponseText(data) {
@@ -546,6 +588,66 @@ function apiErrorFallback() {
   }
 
   return "あれ、今ちょっとAIにつながりにくいみたい〜。少し置いてもう一回話しかけてみてね。";
+}
+
+function shouldRegenerateReply(reply) {
+  const normalized = normalizeForMatch(reply);
+  const bannedPhrases = [
+    "ふむなるほどな",
+    "温度あるね",
+    "きれいに説明しなくていいよ",
+    "雑に置いた言葉もちゃんと会話",
+    "新しくカウンセリング",
+    "話してくれてありがとう"
+  ];
+
+  if (bannedPhrases.some((phrase) => normalized.includes(normalizeForMatch(phrase)))) {
+    return true;
+  }
+
+  return conversationMemory
+    .map((item) => item.botReply)
+    .filter(Boolean)
+    .slice(-6)
+    .some((previousReply) => {
+      const previous = normalizeForMatch(previousReply);
+      if (!previous) {
+        return false;
+      }
+
+      return (
+        normalized.slice(0, 12) === previous.slice(0, 12) ||
+        textSimilarity(normalized, previous) > 0.68
+      );
+    });
+}
+
+function textSimilarity(a, b) {
+  if (!a || !b) {
+    return 0;
+  }
+
+  const shorter = a.length < b.length ? a : b;
+  const longer = a.length < b.length ? b : a;
+
+  if (longer.includes(shorter) && shorter.length >= 16) {
+    return shorter.length / longer.length;
+  }
+
+  const aBigrams = bigrams(a);
+  const bBigrams = bigrams(b);
+  const bSet = new Set(bBigrams);
+  const overlap = aBigrams.filter((item) => bSet.has(item)).length;
+
+  return overlap / Math.max(aBigrams.length, bBigrams.length, 1);
+}
+
+function bigrams(text) {
+  if (text.length < 2) {
+    return [text];
+  }
+
+  return Array.from({ length: text.length - 1 }, (_, index) => text.slice(index, index + 2));
 }
 
 function createFallbackReply(text, tone) {
